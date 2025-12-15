@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Note: Keep package-lock.json or yarn.lock! 
+# Environment Variables (Security Risk!)
+.env
+.env.local
+.env.example
+backend/.env
+frontend/.env
+*.local
+
+
+# Build Outputs (Frontend & Backend)
+dist/
+build/
+frontend/dist/
+frontend/build/
+backend/dist/
+dist-ssr/
+
+# ------------------------------------------------
+# Logs & Debugging
+# ------------------------------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+
+# Testing & Coverage
+coverage/
+
+# Temporary Files
+tmp/
+temp/
+
+# IDE & Operating System Files
+# ------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
