@@ -2,8 +2,9 @@ name: Frontend CI
 
 on:
   push:
-    paths:
-      - "frontend/**"
+    branches:
+      - main
+      - v2
 
 jobs:
   frontend-ci:

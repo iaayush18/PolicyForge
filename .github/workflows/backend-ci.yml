@@ -2,8 +2,9 @@ name: Backend CI
 
 on:
   push:
-    paths:
-      - "backend/**"
+    branches:
+      - main
+      - v2
 
 jobs:
   backend-ci:
