@@ -1,42 +1,702 @@
+/* ============================================================
+   WELL-BEING PORTAL — Production Design System
+   Theme: Refined Dark Glass — High contrast + clarity
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Typography */
+  --font-body: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Background layers */
+  --bg-base: #0a0c1a;
+  --bg-mesh-1: #1a1040;
+  --bg-mesh-2: #0d1f3c;
+  --bg-mesh-3: #0f1a30;
+
+  /* Glass surfaces — layered for depth */
+  --glass-subtle: rgba(255, 255, 255, 0.04);
+  --glass-base: rgba(255, 255, 255, 0.07);
+  --glass-elevated: rgba(255, 255, 255, 0.11);
+  --glass-high: rgba(255, 255, 255, 0.16);
+
+  /* Borders — clearly visible without being harsh */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-base: rgba(255, 255, 255, 0.14);
+  --border-bright: rgba(255, 255, 255, 0.28);
+  --border-accent: rgba(139, 120, 255, 0.4);
+
+  /* Blur levels */
+  --blur-sm: blur(8px);
+  --blur-md: blur(16px);
+  --blur-lg: blur(28px);
+  --blur-xl: blur(40px);
+
+  /* Accent palette — vivid but purposeful */
+  --accent-violet: #8b78ff;
+  --accent-violet-bright: #a78bfa;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #10b981;
+  --accent-amber: #fbbf24;
+  --accent-orange: #f97316;
+  --accent-red: #f87171;
+
+  /* Text hierarchy — clear contrast ratios */
+  --text-primary: rgba(255, 255, 255, 0.96);
+  --text-secondary: rgba(220, 220, 255, 0.72);
+  --text-tertiary: rgba(180, 180, 220, 0.50);
+  --text-muted: rgba(150, 150, 200, 0.36);
+
+  /* Shadows */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.2);
+  --shadow-elevated: 0 8px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-glow-violet: 0 0 30px rgba(139, 120, 255, 0.2);
+  --shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0,0,0,0.15);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+
+  /* Spacing rhythm */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+}
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* ============================================================
+   ANIMATED BACKGROUND
+   ============================================================ */
+.app-bg {
+  min-height: 100vh;
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 10%, rgba(99, 68, 220, 0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 15%, rgba(6, 182, 212, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 50% 90%, rgba(139, 92, 246, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 70%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+  background-attachment: fixed;
+  position: relative;
+  overflow-x: hidden;
 }
 
-@keyframes logo-spin {
+/* Subtle animated noise grain overlay */
+.app-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* ============================================================
+   GLASS SYSTEM — 3 LEVELS OF ELEVATION
+   ============================================================ */
+
+/* Level 1 — Subtle surface (sidebars, secondary cards) */
+.glass {
+  background: var(--glass-base);
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-base);
+  box-shadow: var(--shadow-card), var(--shadow-inner);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+/* Glass shimmer line at top */
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 40%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.25) 60%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Level 2 — Elevated surface (main cards, forms) */
+.glass-strong {
+  background: var(--glass-elevated);
+  backdrop-filter: var(--blur-xl);
+  -webkit-backdrop-filter: var(--blur-xl);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--border-bright);
+  box-shadow: var(--shadow-elevated), var(--shadow-inner), var(--shadow-glow-violet);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-strong::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 30%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.4) 70%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Hover behavior — clean lift */
+.glass-hover:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-bright);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.18),
+              0 0 40px rgba(139, 120, 255, 0.15);
+}
+
+/* ============================================================
+   NAVIGATION BAR
+   ============================================================ */
+nav.glass {
+  border-radius: 0 !important;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 1px solid var(--border-base);
+  background: rgba(10, 12, 26, 0.75);
+  backdrop-filter: var(--blur-xl);
+  -webkit-backdrop-filter: var(--blur-xl);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+nav.glass::before {
+  display: none;
+}
+
+nav.glass::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-violet) 30%, var(--accent-cyan) 70%, transparent);
+  opacity: 0.6;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+/* Page-level title */
+h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+h2 { font-size: 1.1rem; font-weight: 700; }
+h3 { font-size: 1rem; font-weight: 600; }
+
+/* Label caps — used for form labels, section headings */
+.label-caps {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* Mono — student IDs, codes */
+.font-mono {
+  font-family: var(--font-mono) !important;
+  font-size: 0.85em;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   FORM INPUTS — high visibility
+   ============================================================ */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-primary) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 11px 16px !important;
+  width: 100%;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: rgba(139, 120, 255, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(139, 120, 255, 0.15), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: rgba(200, 200, 230, 0.28) !important;
+  font-weight: 400;
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='rgba(200,200,255,0.5)' d='M1 1l5 5 5-5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  padding-right: 36px !important;
+}
+
+select option {
+  background-color: #1a1535 !important;
+  color: #fff !important;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.6;
+}
+
+label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+/* Primary CTA */
+.btn-primary,
+button[type="submit"]:not(.btn-ghost):not(.btn-icon),
+.bg-white.text-indigo-700 {
+  font-family: var(--font-body) !important;
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e4ff 100%) !important;
+  color: #3b2db5 !important;
+  border: none !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 12px 24px !important;
+  cursor: pointer;
+  transition: all var(--transition-base) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-white.text-indigo-700:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.2) !important;
+}
+
+.bg-white.text-indigo-700:active,
+button[type="submit"]:active {
+  transform: translateY(0px) scale(0.98) !important;
+}
+
+/* Ghost buttons */
+.bg-white\/10,
+.bg-white\/5 {
+  transition: all var(--transition-fast) !important;
+}
+
+.bg-white\/10:hover { background: rgba(255, 255, 255, 0.16) !important; }
+.bg-white\/5:hover { background: rgba(255, 255, 255, 0.1) !important; }
+
+/* Destructive — trash/delete */
+button .lucide-trash-2,
+button:has(.lucide-trash-2) {
+  transition: color var(--transition-fast);
+}
+
+/* ============================================================
+   STAT CARDS — glass-strong variant
+   ============================================================ */
+.glass-strong.glass-hover.group {
+  border: 1px solid var(--border-base);
+  transition: all var(--transition-base);
+}
+
+.glass-strong.glass-hover.group:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-elevated), 0 0 30px rgba(139, 120, 255, 0.12);
+}
+
+/* Stat value */
+.text-3xl.font-black {
+  font-family: var(--font-body);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+/* ============================================================
+   TABLE — admin student directory
+   ============================================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  font-family: var(--font-body);
+  font-size: 0.6rem !important;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted) !important;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+tbody tr {
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+tbody td .font-bold {
+  color: var(--text-primary);
+}
+
+tbody td .text-xs.opacity-50 {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted) !important;
+  opacity: 1 !important;
+}
+
+/* Risk badges */
+.px-3.py-1.rounded-lg.text-\[10px\].font-black {
+  font-family: var(--font-mono);
+  font-size: 0.65rem !important;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   RISK SCORE DISPLAY (Student dashboard hero)
+   ============================================================ */
+.text-9xl.font-black {
+  font-family: var(--font-body);
+  font-size: 7rem !important;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  text-shadow: 0 0 60px currentColor, 0 0 100px currentColor;
+  filter: drop-shadow(0 4px 24px currentColor);
+  transition: all var(--transition-slow);
+}
+
+/* ============================================================
+   PHQ-9 ASSESSMENT — radio option cards
+   ============================================================ */
+label.flex.items-center.gap-4 {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  transition: all var(--transition-fast) !important;
+  cursor: pointer;
+}
+
+label.flex.items-center.gap-4:hover {
+  border-color: rgba(139, 120, 255, 0.4) !important;
+  background: rgba(139, 120, 255, 0.08) !important;
+}
+
+/* Selected state */
+label.bg-white.text-indigo-900 {
+  background: linear-gradient(135deg, #fff 0%, #e8e4ff 100%) !important;
+  color: #2d1f8c !important;
+  border-color: #c4b8ff !important;
+  box-shadow: 0 4px 20px rgba(139, 120, 255, 0.3) !important;
+}
+
+/* ============================================================
+   PROGRESS BAR (PHQ-9)
+   ============================================================ */
+.bg-white\/5.border.border-white\/5.rounded-full.h-3 {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bg-white.h-full {
+  background: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan)) !important;
+  box-shadow: 0 0 12px rgba(139, 120, 255, 0.5);
+  border-radius: 999px;
+}
+
+/* ============================================================
+   SEARCH BAR
+   ============================================================ */
+.relative input[type="text"] {
+  padding-left: 40px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.relative input[type="text"]:focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(139, 120, 255, 0.5) !important;
+}
+
+/* ============================================================
+   CHART OVERRIDES (Recharts)
+   ============================================================ */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(15, 12, 40, 0.9) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: var(--radius-md) !important;
+  backdrop-filter: var(--blur-md) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.8rem !important;
+  padding: 8px 12px !important;
+}
+
+.recharts-legend-wrapper {
+  font-family: var(--font-body) !important;
+  font-size: 0.75rem !important;
+}
+
+.recharts-legend-item-text {
+  color: rgba(220, 220, 255, 0.7) !important;
+}
+
+/* ============================================================
+   ASSESSMENT HISTORY ITEMS
+   ============================================================ */
+.space-y-4 > .flex.items-center.justify-between.p-4 {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  background: rgba(255,255,255,0.04) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.space-y-4 > .flex.items-center.justify-between.p-4:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  transform: translateX(4px);
+}
+
+/* ============================================================
+   INFO PANELS (warnings, notes)
+   ============================================================ */
+.bg-indigo-900\/30 {
+  background: rgba(55, 40, 130, 0.25) !important;
+  border-color: rgba(139, 120, 255, 0.2) !important;
+}
+
+.bg-orange-500\/10 {
+  background: rgba(249, 115, 22, 0.1) !important;
+}
+
+/* ============================================================
+   LOADING SPINNER
+   ============================================================ */
+.animate-spin {
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Loading container */
+.min-h-screen.flex.items-center.justify-center.app-bg .glass {
+  min-width: 200px;
+}
+
+/* ============================================================
+   SCROLLBAR — branded
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 120, 255, 0.4);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 120, 255, 0.6);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeInUp {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateY(16px);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(139, 120, 255, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(139, 120, 255, 0.4); }
+}
+
+/* Entry animations for main content areas */
+.container.mx-auto > * {
+  animation: fadeInUp 0.4s ease both;
+}
+
+.container.mx-auto > *:nth-child(1) { animation-delay: 0ms; }
+.container.mx-auto > *:nth-child(2) { animation-delay: 60ms; }
+.container.mx-auto > *:nth-child(3) { animation-delay: 120ms; }
+.container.mx-auto > *:nth-child(4) { animation-delay: 180ms; }
+
+/* ============================================================
+   STAT CARD ICON CONTAINERS
+   ============================================================ */
+.p-3.rounded-2xl {
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: transform var(--transition-base);
+}
+
+/* ============================================================
+   RESPONSIVE TWEAKS
+   ============================================================ */
+@media (max-width: 768px) {
+  .glass-strong {
+    border-radius: var(--radius-xl);
+    padding: 24px !important;
+  }
+
+  .text-9xl.font-black {
+    font-size: 5rem !important;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
+
+  thead th,
+  tbody td {
+    padding: 10px 12px;
   }
 }
 
-.card {
-  padding: 2em;
+/* ============================================================
+   SELECTION COLOR
+   ============================================================ */
+::selection {
+  background: rgba(139, 120, 255, 0.35);
+  color: white;
 }
 
-.read-the-docs {
-  color: #888;
+/* ============================================================
+   FOCUS RING (accessibility)
+   ============================================================ */
+*:focus-visible {
+  outline: 2px solid rgba(139, 120, 255, 0.7) !important;
+  outline-offset: 3px !important;
 }

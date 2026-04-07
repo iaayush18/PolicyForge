@@ -28,21 +28,27 @@ function App() {
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#363636',
-                color: '#fff',
+                background: 'rgba(20, 16, 50, 0.92)',
+                backdropFilter: 'blur(16px)',
+                color: 'rgba(255, 255, 255, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.14)',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                fontSize: '0.875rem',
+                fontFamily: "'Sora', system-ui, sans-serif",
               },
               success: {
                 duration: 3000,
                 iconTheme: {
                   primary: '#10B981',
-                  secondary: '#fff',
+                  secondary: 'rgba(20, 16, 50, 0.92)',
                 },
               },
               error: {
                 duration: 4000,
                 iconTheme: {
-                  primary: '#EF4444',
-                  secondary: '#fff',
+                  primary: '#f87171',
+                  secondary: 'rgba(20, 16, 50, 0.92)',
                 },
               },
             }}

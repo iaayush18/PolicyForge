@@ -1,6 +1,6 @@
 /**
  * src/pages/EditStudent.jsx
- * Edit Student Demographics (Admin Only)
+ * Migrated for Prisma & Glassmorphism
  */
 
 import React, { useState, useEffect } from 'react';
@@ -31,6 +31,7 @@ const EditStudent = () => {
     try {
       const response = await studentAPI.getById(id);
       const studentData = response.student;
+      
       setStudent(studentData);
       setFormData({
         name: studentData.name,
@@ -51,7 +52,7 @@ const EditStudent = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'age' || name === 'cgpa' ? parseFloat(value) : value,
     }));
   };
 
@@ -61,7 +62,7 @@ const EditStudent = () => {
 
     try {
       await studentAPI.update(id, formData);
-      toast.success('Student updated successfully!');
+      toast.success('Student demographics updated!');
       navigate('/admin');
     } catch (error) {
       const message = error.response?.data?.message || 'Error updating student';
@@ -73,101 +74,94 @@ const EditStudent = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading student data...</p>
+      <div className="min-h-screen flex items-center justify-center app-bg">
+        <div className="glass p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+          <p className="mt-4 text-white font-medium">Fetching Profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen app-bg text-white pb-12">
       {/* Header */}
-      <nav className="bg-indigo-600 text-white p-4 shadow-lg">
+      <nav className="glass sticky top-0 z-50 p-4 mb-8 rounded-none border-b-0 shadow-xl">
         <div className="container mx-auto flex items-center gap-4">
           <button
             onClick={() => navigate('/admin')}
-            className="flex items-center gap-2 hover:bg-indigo-700 px-3 py-2 rounded-lg transition"
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl transition border border-white/20"
           >
-            <ArrowLeft size={20} />
-            Back
+            <ArrowLeft size={18} />
+            <span className="text-sm font-medium">Back</span>
           </button>
           <div>
-            <h1 className="text-2xl font-bold">Edit Student Demographics</h1>
-            <p className="text-sm text-indigo-200">{student?.studentId} - {student?.name}</p>
+            <h1 className="text-xl font-bold tracking-tight">Edit Demographics</h1>
+            <p className="text-xs text-indigo-100 opacity-70 uppercase tracking-widest">{student?.studentId} — {student?.name}</p>
           </div>
         </div>
       </nav>
 
-      <div className="container mx-auto p-6 max-w-2xl">
-        <div className="bg-white rounded-xl shadow-md p-8">
+      <div className="container mx-auto p-4 max-w-2xl">
+        <div className="glass-strong p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Readonly Fields */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <p className="text-sm font-medium text-gray-700 mb-2">Student Information</p>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+            {/* Readonly Info Section */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+              <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-4">Core Account Details</p>
+              <div className="grid grid-cols-2 gap-6 text-sm">
                 <div>
-                  <span className="text-gray-600">Student ID:</span>
-                  <span className="ml-2 font-semibold">{student?.studentId}</span>
+                  <span className="block opacity-50 text-[10px] uppercase font-bold">System ID</span>
+                  <span className="font-mono text-indigo-100">{student?.studentId}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Email:</span>
-                  <span className="ml-2 font-semibold">{student?.email}</span>
+                  <span className="block opacity-50 text-[10px] uppercase font-bold">Email Address</span>
+                  {/* ✅ FIXED: Prisma nests email inside user object */}
+                  <span className="font-semibold text-indigo-100 truncate block">{student?.user?.email}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Current Risk Score:</span>
-                  <span className="ml-2 font-semibold">{student?.currentRiskScore}</span>
+                  <span className="block opacity-50 text-[10px] uppercase font-bold">Current Risk</span>
+                  <span className="font-bold text-red-400">{student?.currentRiskScore} / 3</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Total Assessments:</span>
-                  <span className="ml-2 font-semibold">{student?.totalAssessments}</span>
+                  <span className="block opacity-50 text-[10px] uppercase font-bold">Total History</span>
+                  <span className="font-bold">{student?.totalAssessments} Check-ins</span>
                 </div>
               </div>
             </div>
 
             {/* Editable Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
-                </label>
+                <label className="block text-xs font-bold text-indigo-100 uppercase tracking-wider mb-2">Legal Name</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 outline-none text-white transition-all"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Age *
-                </label>
+                <label className="block text-xs font-bold text-indigo-100 uppercase tracking-wider mb-2">Age</label>
                 <input
                   type="number"
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
-                  min="15"
-                  max="100"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 outline-none text-white transition-all"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender *
-                </label>
+                <label className="block text-xs font-bold text-indigo-100 uppercase tracking-wider mb-2">Gender</label>
                 <select
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-white/20 text-white"
                   required
                 >
                   <option value="Male">Male</option>
@@ -177,73 +171,60 @@ const EditStudent = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Course/Degree *
-                </label>
+                <label className="block text-xs font-bold text-indigo-100 uppercase tracking-wider mb-2">Academic Course</label>
                 <input
                   type="text"
                   name="course"
                   value={formData.course}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 outline-none text-white transition-all"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CGPA *
-                </label>
+                <label className="block text-xs font-bold text-indigo-100 uppercase tracking-wider mb-2">Current CGPA</label>
                 <input
                   type="number"
                   name="cgpa"
                   value={formData.cgpa}
                   onChange={handleChange}
                   step="0.01"
-                  min="0"
-                  max="10"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 outline-none text-white transition-all"
                   required
                 />
               </div>
             </div>
 
             {/* Warning Box */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-              <AlertTriangle className="text-yellow-600 flex-shrink-0" size={24} />
-              <div>
-                <p className="font-semibold text-yellow-800 mb-1">Important Notice</p>
-                <p className="text-sm text-yellow-700">
-                  PHQ-9 assessment answers <strong>cannot be edited</strong> by administrators. 
-                  Students must update their own mental health assessments. You can only modify 
-                  demographic information (name, age, course, CGPA).
-                </p>
-              </div>
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-5 flex gap-4 mt-8">
+              <AlertTriangle className="text-orange-400 flex-shrink-0" size={24} />
+              <p className="text-xs text-orange-100/80 leading-relaxed">
+                <strong className="text-orange-300 block mb-1 uppercase tracking-tighter">Restriction</strong>
+                Mental health assessments are clinical data and cannot be modified by staff. Admin updates are limited to academic and demographic metadata only.
+              </p>
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-6">
               <button
                 type="button"
                 onClick={() => navigate('/admin')}
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
+                className="flex-1 px-6 py-3 bg-white/5 text-white rounded-xl font-bold hover:bg-white/10 border border-white/10 transition"
               >
-                Cancel
+                Discard
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 bg-white text-indigo-700 py-3 rounded-xl font-bold hover:bg-indigo-50 transition transform active:scale-[0.98] shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Saving...
-                  </>
+                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-700"></div>
                 ) : (
                   <>
                     <Save size={20} />
-                    Save Changes
+                    Update Profile
                   </>
                 )}
               </button>

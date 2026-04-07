@@ -1,6 +1,6 @@
 /**
  * src/pages/Login.jsx
- * Login Page Component
+ * Optimized with Glassmorphism & PostgreSQL Enum support
  */
 
 import React, { useState } from 'react';
@@ -22,8 +22,8 @@ const Login = () => {
     const result = await login(email, password);
 
     if (result.success) {
-      // Redirect based on role
-      if (result.user.role === 'admin') {
+      // ✅ FIXED: Roles are now uppercase Enums from PostgreSQL
+      if (result.user.role === 'ADMIN') {
         navigate('/admin');
       } else {
         navigate('/student');
@@ -44,59 +44,59 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        {/* Header */}
+    <div className="min-h-screen app-bg flex items-center justify-center p-4">
+      {/* ✅ FIXED: Applied 'glass' class and centered design */}
+      <div className="glass-strong p-8 w-full max-w-md border-0 shadow-2xl">
         <div className="text-center mb-8">
-          <div className="bg-indigo-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-inner">
             <Users className="text-white" size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Mental Health Monitor</h1>
-          <p className="text-gray-600 mt-2">Student Well-being Assessment System</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Well-being Portal</h1>
+          <p className="text-indigo-100/70 mt-2 text-sm uppercase tracking-widest font-medium">Student Monitoring System</p>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Mail className="inline mr-2" size={16} />
+            <label className="block text-xs font-bold text-indigo-100 uppercase tracking-wider mb-2">
               Email Address
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-              placeholder="your.email@university.edu"
-              required
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 outline-none text-white transition-all placeholder:text-white/20"
+                placeholder="university.email@edu.com"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Lock className="inline mr-2" size={16} />
+            <label className="block text-xs font-bold text-indigo-100 uppercase tracking-wider mb-2">
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-              placeholder="Enter your password"
-              required
-            />
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 outline-none text-white transition-all placeholder:text-white/20"
+                placeholder="••••••••"
+                required
+              />
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-white text-indigo-700 py-3 rounded-xl font-bold hover:bg-indigo-50 transition transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg mt-2"
           >
             {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Signing in...
-              </>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-700"></div>
             ) : (
               <>
                 <LogIn size={20} />
@@ -106,35 +106,26 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Demo Credentials */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="font-semibold text-gray-700 mb-3 text-center">Demo Credentials</p>
-          <div className="grid grid-cols-2 gap-2">
+        {/* Demo Credentials Section */}
+        <div className="mt-8 pt-6 border-t border-white/10">
+          <p className="text-[10px] font-black text-indigo-100/50 uppercase tracking-[0.2em] mb-4 text-center">Quick Access</p>
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => fillDemoCredentials('admin')}
-              className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition text-sm font-medium"
+              className="px-3 py-2 bg-white/5 text-white rounded-lg hover:bg-white/10 border border-white/10 transition text-xs font-bold"
             >
-              Admin Login
+              Admin Demo
             </button>
             <button
               type="button"
               onClick={() => fillDemoCredentials('student')}
-              className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm font-medium"
+              className="px-3 py-2 bg-white/5 text-white rounded-lg hover:bg-white/10 border border-white/10 transition text-xs font-bold"
             >
-              Student Login
+              Student Demo
             </button>
           </div>
-          <div className="mt-3 text-xs text-gray-600 space-y-1">
-            <p><strong>Admin:</strong> admin@university.edu / admin123</p>
-            <p><strong>Student:</strong> student1@university.edu / Welcome123</p>
-          </div>
         </div>
-
-        {/* Footer */}
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Need help? Contact support@university.edu
-        </p>
       </div>
     </div>
   );

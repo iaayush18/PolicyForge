@@ -1,24 +1,29 @@
 /**
  * controllers/dashboard.controller.js
- * Logic for Dashboard Analytics
+ * Logic for Dashboard Analytics - Migrated to Prisma
  */
-const Student = require('../models/Student.model');
-const Assessment = require('../models/Assessment.model');
+
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // @desc    Get top-level statistics
 // @route   GET /api/dashboard/stats
 const getStats = async (req, res, next) => {
   try {
-    const totalStudents = await Student.countDocuments();
-    
-    // Count critical students (Risk Score 3)
-    const criticalCount = await Student.countDocuments({ currentRiskScore: 3 });
-    
-    // Count moderate students (Risk Score 2)
-    const moderateCount = await Student.countDocuments({ currentRiskScore: 2 });
-    
-    // Count healthy/low (Risk 0-1)
-    const healthyCount = await Student.countDocuments({ currentRiskScore: { $lte: 1 } });
+    // Optimization: Run all counts in parallel to reduce response time
+    const [totalStudents, criticalCount, moderateCount, healthyCount] = await Promise.all([
+      prisma.student.count(),
+      prisma.student.count({ where: { currentRiskScore: 3 } }),
+      prisma.student.count({ where: { currentRiskScore: 2 } }),
+      prisma.student.count({ 
+        where: { 
+          OR: [
+            { currentRiskScore: { lte: 1 } },
+            { currentRiskScore: null } 
+          ] 
+        } 
+      })
+    ]);
 
     res.json({
       success: true,
@@ -39,38 +44,56 @@ const getStats = async (req, res, next) => {
 // @route   GET /api/dashboard/high-risk
 const getHighRiskStudents = async (req, res, next) => {
   try {
-    // Find students with Risk Score 3 (Severe)
-    const highRiskStudents = await Student.find({ currentRiskScore: 3 })
-      .populate('userId', 'email')
-      .sort({ lastAssessmentDate: -1 }) // Most recent first
-      .limit(10);
+    const students = await prisma.student.findMany({
+      where: { currentRiskScore: 3 },
+      include: {
+        user: { select: { email: true } }
+      },
+      orderBy: { lastAssessmentDate: 'desc' },
+      take: 10
+    });
 
     res.json({
       success: true,
-      data: highRiskStudents
+      data: students
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get Risk Distribution by Course
+// @desc    Get Risk Distribution and Stats by Course
 // @route   GET /api/dashboard/by-course
 const getStatsByCourse = async (req, res, next) => {
   try {
-    const stats = await Student.aggregate([
-      {
-        $group: {
-          _id: '$course', // Group by Course Name
-          count: { $sum: 1 },
-          avgRisk: { $avg: '$currentRiskScore' },
-          criticalCount: {
-            $sum: { $cond: [{ $eq: ['$currentRiskScore', 3] }, 1, 0] }
-          }
-        }
-      },
-      { $sort: { avgRisk: -1 } } // Sort by highest risk
-    ]);
+    const data = await prisma.student.findMany({
+      select: { course: true, currentRiskScore: true }
+    });
+
+    // Process the data to get custom aggregations that Prisma's groupBy doesn't easily support
+    const courseStatsMap = data.reduce((acc, s) => {
+      if (!acc[s.course]) {
+        acc[s.course] = {
+          course: s.course,
+          count: 0,
+          totalRisk: 0,
+          criticalCount: 0
+        };
+      }
+      const score = s.currentRiskScore || 0;
+      acc[s.course].count++;
+      acc[s.course].totalRisk += score;
+      if (score === 3) acc[s.course].criticalCount++;
+
+      return acc;
+    }, {});
+
+    const stats = Object.values(courseStatsMap).map(c => ({
+      course: c.course,
+      count: c.count,
+      avgRisk: (c.totalRisk / c.count).toFixed(2),
+      criticalCount: c.criticalCount
+    }));
 
     res.json({
       success: true,
@@ -81,21 +104,23 @@ const getStatsByCourse = async (req, res, next) => {
   }
 };
 
-// @desc    Get Recent Activity
-// @route   GET /api/dashboard/recent-assessments
+// @desc    Get Recent Activity (Latest Assessments)
+// @route   GET /api/dashboard/recent-activity
 const getRecentActivity = async (req, res, next) => {
   try {
-    const recent = await Assessment.find()
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate({
-        path: 'studentId',
-        select: 'name studentId currentRiskScore'
-      });
+    const recentAssessments = await prisma.assessment.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        student: {
+          select: { name: true, studentId: true }
+        }
+      }
+    });
 
     res.json({
       success: true,
-      data: recent
+      data: recentAssessments
     });
   } catch (error) {
     next(error);

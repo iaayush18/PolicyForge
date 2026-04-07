@@ -1,45 +1,16 @@
 /**
  * controllers/student.controller.js
+ * Migrated to Prisma & Postgres via Student Service
  */
-const Student = require('../models/Student.model');
-const User = require('../models/User.model');
-const Assessment = require('../models/Assessment.model');
+
+const studentService = require('../services/student.service');
 
 // @desc    Create new student (Admin only)
 // @route   POST /api/students
 const createStudent = async (req, res, next) => {
   try {
-    const { email, password, studentId, name, age, gender, course, cgpa } = req.body;
-
-    // 1. Check Duplicates
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User with this email already exists' });
-    }
-
-    const existingStudent = await Student.findOne({ studentId });
-    if (existingStudent) {
-      return res.status(400).json({ success: false, message: 'Student ID already exists' });
-    }
-
-    // 2. Create User
-    const user = await User.create({
-      email,
-      password: password || 'Welcome123',
-      role: 'student',
-      isActive: true
-    });
-
-    // 3. Create Student Profile
-    const student = await Student.create({
-      userId: user._id,
-      studentId,
-      name,
-      age,
-      gender,
-      course,
-      cgpa
-    });
+    // The service handles duplicate checks and the DB transaction
+    const student = await studentService.createStudent(req.body);
 
     res.status(201).json({
       success: true,
@@ -47,6 +18,9 @@ const createStudent = async (req, res, next) => {
       data: student
     });
   } catch (error) {
+    if (error.message.includes('exists')) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -57,27 +31,11 @@ const getAllStudents = async (req, res, next) => {
   try {
     const { riskScore, course, search } = req.query;
 
-    // Build Query
-    let query = {};
-
-    if (riskScore !== undefined && riskScore !== 'all') {
-      query.currentRiskScore = parseInt(riskScore);
-    }
-
-    if (course) {
-      query.course = course;
-    }
-
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { studentId: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const students = await Student.find(query)
-      .populate('userId', 'email')
-      .sort({ currentRiskScore: -1, name: 1 }); // High risk first
+    const students = await studentService.getAllStudents({
+      riskScore,
+      course,
+      search
+    });
 
     res.status(200).json({
       success: true,
@@ -93,15 +51,8 @@ const getAllStudents = async (req, res, next) => {
 // @route   GET /api/students/profile/me
 const getMyProfile = async (req, res, next) => {
   try {
-    const student = await Student.findOne({ userId: req.user.userId })
-      .populate('userId', 'email');
-
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student profile not found' });
-    }
-
-    const latestAssessment = await Assessment.findOne({ studentId: student._id })
-      .sort({ createdAt: -1 });
+    // Ensure req.user.id matches the ID from your Auth middleware
+    const { student, latestAssessment } = await studentService.getMyProfile(req.user.id);
 
     res.status(200).json({
       success: true,
@@ -109,29 +60,25 @@ const getMyProfile = async (req, res, next) => {
       latestAssessment
     });
   } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
 
-// @desc    Get student by ID
+// @desc    Get student by ID (Admin or Self)
 // @route   GET /api/students/:id
 const getStudentById = async (req, res, next) => {
   try {
-    const student = await Student.findById(req.params.id)
-      .populate('userId', 'email lastLogin');
+    const { student, latestAssessment } = await studentService.getStudentById(req.params.id);
 
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-
-    // Security Check: Only Admin or the Student themselves can view this
-    const isOwner = student.userId._id.toString() === req.user.userId;
+    // SECURITY CHECK: Admin or the owner only
+    // In Prisma, student.userId is a simple string (the foreign key)
+    const isOwner = student.userId === req.user.id;
     if (req.user.role !== 'admin' && !isOwner) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-
-    const latestAssessment = await Assessment.findOne({ studentId: student._id })
-      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -139,6 +86,9 @@ const getStudentById = async (req, res, next) => {
       latestAssessment
     });
   } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -147,18 +97,13 @@ const getStudentById = async (req, res, next) => {
 // @route   PATCH /api/students/:id
 const updateStudent = async (req, res, next) => {
   try {
+    // Note: You should filter req.body here or in the service to 
+    // prevent users from updating sensitive fields like riskScore manually
     const { name, age, gender, course, cgpa } = req.body;
     
-    // Using findByIdAndUpdate for cleaner code
-    const student = await Student.findByIdAndUpdate(
-      req.params.id,
-      { $set: { name, age, gender, course, cgpa } },
-      { new: true, runValidators: true }
-    );
-
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
+    const student = await studentService.updateStudent(req.params.id, {
+      name, age, gender, course, cgpa
+    });
 
     res.status(200).json({
       success: true,
@@ -166,6 +111,9 @@ const updateStudent = async (req, res, next) => {
       data: student
     });
   } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -174,25 +122,17 @@ const updateStudent = async (req, res, next) => {
 // @route   DELETE /api/students/:id
 const deleteStudent = async (req, res, next) => {
   try {
-    const student = await Student.findById(req.params.id);
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-
-    // 1. Delete associated User account
-    await User.findByIdAndDelete(student.userId);
-
-    // 2. Delete all Assessments
-    await Assessment.deleteMany({ studentId: student._id });
-
-    // 3. Delete Student Profile
-    await Student.findByIdAndDelete(req.params.id);
+    // The service handles deleting Assessments -> Student -> User in a transaction
+    await studentService.deleteStudent(req.params.id);
 
     res.status(200).json({
       success: true,
       message: 'Student and all associated data deleted successfully'
     });
   } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };

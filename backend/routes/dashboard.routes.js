@@ -20,7 +20,7 @@ router.use(adminOnly);
 router.get('/stats', getStats);
 router.get('/high-risk', getHighRiskStudents);
 router.get('/by-course', getStatsByCourse);
-router.get('/recent-assessments', getRecentActivity);
+router.get('/recent-activity', getRecentActivity);
 
 // Placeholder for other frontend calls if not implemented yet
 router.get('/trends', (req, res) => res.json({ success: true, data: [] }));

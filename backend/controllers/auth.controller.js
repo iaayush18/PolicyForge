@@ -1,91 +1,89 @@
 /**
  * controllers/auth.controller.js
  */
-const User = require('../models/User.model');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-// Generate JWT Token
-const generateToken = (userId) => {
-  // 👇 CRITICAL: Using 'userId' to match auth.middleware.js
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'fallback_secret', {
-    expiresIn: '30d',
-  });
+const crypto = require('crypto');
+
+const getUserSecret = (userId) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET missing");
+  }
+
+  return crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(userId.toString())
+    .digest('hex');
 };
 
-// @desc    Auth user & get token
-// @route   POST /api/auth/login
-// @access  Public
+const generateToken = (userId) => {
+  const secret = getUserSecret(userId);
+  return jwt.sign({ userId }, secret, { expiresIn: '24h' });
+};
+
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    // 1. Check if user exists
-    const user = await User.findOne({ email });
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 2. Check if active (Middleware compatibility)
-    if (user.isActive === false) {
-        return res.status(403).json({ success: false, message: 'Account is deactivated' });
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
 
-    // 3. Validate Password
-    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 4. Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    const token = generateToken(user.id);
 
-    // 5. Send Response
-    const token = generateToken(user._id);
-
-    res.json({
+    return res.json({
       success: true,
+      token,
       user: {
-        _id: user._id,
+        id: user.id,
         email: user.email,
         role: user.role,
         name: user.email.split('@')[0]
-      },
-      token
+      }
     });
 
   } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// @desc    Verify token and return current user
-// @route   GET /api/auth/verify
-// @access  Private
 const verifyUser = async (req, res) => {
   try {
-    // The user ID is already in req.user because of the authMiddleware
-    // We fetch fresh data to ensure the user hasn't been deleted or deactivated
-    const user = await User.findById(req.user.userId).select('-password');
+    // req.user.id is already populated by authMiddleware
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: { student: true } // Helpful for the dashboard
+    });
 
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     res.json({
       success: true,
       user: {
-        _id: user._id,
+        id: user.id,
         email: user.email,
         role: user.role,
-        name: user.email.split('@')[0], // Fallback name logic
-        isActive: user.isActive
+        name: user.student?.name || user.email.split('@')[0]
       }
     });
   } catch (error) {
-    console.error('Verify User Error:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    res.status(500).json({ success: false, message: 'Verification failed' });
   }
 };
 

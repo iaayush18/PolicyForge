@@ -1,6 +1,6 @@
 /**
  * src/context/AuthContext.jsx
- * Authentication Context Provider
+ * Authentication Context Provider - Migrated for Prisma
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -31,19 +31,20 @@ export const AuthProvider = ({ children }) => {
 
       if (token && savedUser) {
         try {
-          // Verify token is still valid
+          // 1. Verify token is still valid with the backend
           await authAPI.verifyToken();
           const userObj = JSON.parse(savedUser);
           setUser(userObj);
           setIsAuthenticated(true);
 
-          // If student, fetch profile
-          if (userObj.role === 'student') {
+          // 2. Postgres Enum Check: role is now 'STUDENT' (uppercase)
+          if (userObj.role === 'STUDENT') {
             const response = await studentAPI.getMyProfile();
+            // student.service.js returns { student, latestAssessment }
             setStudent(response.student);
           }
         } catch (error) {
-          console.error('Token verification failed:', error);
+          console.error('Session restoration failed:', error);
           logout();
         }
       }
@@ -56,30 +57,28 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authAPI.login(email, password);
-      
       const userData = response.user;
-      const token = response.token;
 
-      // Save to localStorage
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(userData));
 
       setUser(userData);
       setIsAuthenticated(true);
 
-      // If student, save profile
-      if (userData.role === 'student' && response.student) {
-        setStudent(response.student);
+      // ✅ FIX: Fetch profile immediately if the user is a student
+      if (userData.role === 'STUDENT') {
+        const profileRes = await studentAPI.getMyProfile();
+        setStudent(profileRes.student);
       }
 
       toast.success('Login successful!');
       return { success: true, user: userData };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+    } catch (error) {  
+     const message = error.response?.data?.message || 'Login failed';
       toast.error(message);
-      return { success: false, error: message };
-    }
+      return { success: false, error: message }; }
   };
+
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -99,8 +98,9 @@ export const AuthProvider = ({ children }) => {
     student,
     loading,
     isAuthenticated,
-    isAdmin: user?.role === 'admin',
-    isStudent: user?.role === 'student',
+    // Helper getters updated for Postgres Enums
+    isAdmin: user?.role === 'ADMIN',
+    isStudent: user?.role === 'STUDENT',
     login,
     logout,
     updateStudentProfile,

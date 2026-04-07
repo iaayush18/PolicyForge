@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  role      Role      @default(STUDENT)
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  student   Student?
+}
+
+model Student {
+  id                 String       @id @default(uuid())
+  userId             String       @unique
+  studentId          String       @unique
+  name               String
+  age                Int
+  gender             Gender
+  course             String
+  cgpa               Float
+  currentRiskScore   Int          @default(0)
+  lastAssessmentDate DateTime?
+  totalAssessments   Int          @default(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  assessments        Assessment[]
+  user               User         @relation(fields: [userId], references: [id])
+}
+
+model Assessment {
+  id               String   @id @default(uuid())
+  studentId        String
+  q1_interest      Int
+  q2_depressed     Int
+  q3_sleep         Int
+  q4_energy        Int
+  q5_appetite      Int
+  q6_failure       Int
+  q7_concentration Int
+  q8_movement      Int
+  q9_suicidal      Int
+  rawScore         Int
+  riskScore        Int
+  riskLevel        String
+  notes            String?
+  isCritical       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  student          Student  @relation(fields: [studentId], references: [id])
+
+  @@index([studentId, createdAt])
+  @@index([riskScore])
+  @@index([isCritical])
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+}

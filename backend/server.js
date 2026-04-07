@@ -1,92 +1,140 @@
 /**
  * server.js
- * Main Express.js Server
+ * Express Server (PostgreSQL + Prisma)
  */
-
+require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const helmet = require('helmet');
 const morgan = require('morgan');
-
-// Load environment variables
-dotenv.config();
+const { PrismaClient } = require('@prisma/client');
+console.log("DB URL:", process.env.DATABASE_URL);
+// Init Prisma
+const prisma = new PrismaClient();
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const studentRoutes = require('./routes/student.routes');
-const assessmentRoutes = require('./routes/assessment.routes'); 
-const dashboardRoutes = require('./routes/dashboard.routes');   
-
-// Import middleware
-const errorHandler = require('./middleware/errorHandler');
-
-// Connect to Database
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
-  }
-};
-connectDB();
-
-// Initialize Express app
-const app = express();
+const assessmentRoutes = require('./routes/assessment.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 
 // Middleware
-app.use(helmet()); // Security headers
+const errorHandler = require('./middleware/errorHandler');
+
+// Init app
+const app = express();
+
+// =========================
+// MIDDLEWARE
+// =========================
+app.use(helmet());
+
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev')); // Logging
 
-// API Routes
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
+
+// =========================
+// ROUTES
+// =========================
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+// =========================
+// HEALTH CHECK
+// =========================
+app.get('/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.status(200).json({
+      status: 'healthy',
+      db: 'connected',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      db: 'disconnected',
+      error: error.message
+    });
+  }
+});
+
+// =========================
+// ROOT
+// =========================
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Student Mental Health API (PostgreSQL + Prisma)',
+    version: '2.0'
   });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({ message: 'Student Mental Health Monitoring API v1.0' });
-});
-
-// 404 handler (Must be before error handler)
+// =========================
+// 404 HANDLER
+// =========================
 app.use((req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
   res.status(404);
   next(error);
 });
 
-// Error handling middleware (must be last)
+// =========================
+// ERROR HANDLER
+// =========================
 app.use(errorHandler);
 
-// Start server
+// =========================
+// SERVER START
+// =========================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+
+async function startServer() {
+  try {
+    // Test DB connection
+    await prisma.$connect();
+    console.log('✅ PostgreSQL connected via Prisma');
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to connect to DB:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+// =========================
+// GRACEFUL SHUTDOWN
+// =========================
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Shutting down...');
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
-// Handle unhandled promise rejections
+process.on('SIGTERM', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+// UNHANDLED ERRORS
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Promise Rejection:', err);
-  process.exit(1);
 });
 
 module.exports = app;

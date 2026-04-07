@@ -1,8 +1,9 @@
 /**
  * controllers/assessment.controller.js
+ * Migrated to Prisma & Postgres via Assessment Service
  */
-const Assessment = require('../models/Assessment.model');
-const Student = require('../models/Student.model');
+
+const assessmentService = require('../services/assessment.service');
 
 // @desc    Submit a new PHQ-9 Assessment
 // @route   POST /api/assessments
@@ -10,40 +11,33 @@ const Student = require('../models/Student.model');
 const submitAssessment = async (req, res, next) => {
   try {
     const { phq9Answers, notes } = req.body;
+    // req.user.id comes from your auth middleware
+    const userId = req.user.id; 
 
-    // 1. Find the Student Profile associated with the logged-in User
-    const student = await Student.findOne({ userId: req.user.userId });
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student profile not found' });
-    }
-
-    // 2. Create the Assessment
-    // (The pre('validate') hook in the Model will automatically calculate scores)
-    const assessment = await Assessment.create({
-      studentId: student._id,
-      phq9Answers,
+    // The service handles: Finding student, calculating scores, 
+    // and the Database Transaction to update student stats.
+    const assessment = await assessmentService.submitAssessment(
+      userId, 
+      phq9Answers, 
       notes
-    });
-
-    // 3. Update the Student Profile with new Stats
-    student.currentRiskScore = assessment.riskScore;
-    student.lastAssessmentDate = assessment.createdAt;
-    student.totalAssessments = (student.totalAssessments || 0) + 1;
-    await student.save();
+    );
 
     res.status(201).json({
       success: true,
       message: 'Assessment submitted successfully',
       assessment: {
-        id: assessment._id,
+        id: assessment.id, // Prisma uses .id not ._id
         riskScore: assessment.riskScore,
         riskLevel: assessment.riskLevel,
         rawScore: assessment.rawScore,
         createdAt: assessment.createdAt
       }
     });
-
   } catch (error) {
+    // If service throws "Student profile not found", it lands here
+    if (error.message.includes('not found')) {
+        return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -53,13 +47,7 @@ const submitAssessment = async (req, res, next) => {
 // @access  Private (Student)
 const getMyHistory = async (req, res, next) => {
   try {
-    const student = await Student.findOne({ userId: req.user.userId });
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student profile not found' });
-    }
-
-    const assessments = await Assessment.find({ studentId: student._id })
-      .sort({ createdAt: -1 }); // Newest first
+    const assessments = await assessmentService.getMyHistory(req.user.id);
 
     res.json({
       success: true,
@@ -67,6 +55,9 @@ const getMyHistory = async (req, res, next) => {
       assessments
     });
   } catch (error) {
+    if (error.message.includes('not found')) {
+        return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -76,8 +67,8 @@ const getMyHistory = async (req, res, next) => {
 // @access  Private (Admin)
 const getStudentHistory = async (req, res, next) => {
   try {
-    const assessments = await Assessment.find({ studentId: req.params.studentId })
-      .sort({ createdAt: -1 });
+    // Note: studentId here is the Postgres UUID/ID of the student record
+    const assessments = await assessmentService.getStudentHistory(req.params.studentId);
 
     res.json({
       success: true,
@@ -94,18 +85,20 @@ const getStudentHistory = async (req, res, next) => {
 // @access  Private (Owner/Admin)
 const getAssessmentById = async (req, res, next) => {
   try {
-    const assessment = await Assessment.findById(req.params.id)
-      .populate('studentId', 'name studentId');
-
-    if (!assessment) {
-      return res.status(404).json({ success: false, message: 'Assessment not found' });
+    // Inside getAssessmentById controller
+   if (req.user.role !== 'ADMIN' && assessment.studentId !== req.user.id) {
+      return res.status(403).json({ message: "You can only view your own assessments" });
     }
-
+    const assessment = await assessmentService.getAssessmentById(req.params.id);
+     
     res.json({
       success: true,
       assessment
     });
   } catch (error) {
+    if (error.message.includes('not found')) {
+        return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };

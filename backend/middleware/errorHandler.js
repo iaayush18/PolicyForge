@@ -6,33 +6,25 @@
 const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => e.message);
+const { Prisma } = require('@prisma/client');
+
+if (err instanceof Prisma.PrismaClientKnownRequestError) {
+  // Unique constraint
+  if (err.code === 'P2002') {
     return res.status(400).json({
       success: false,
-      message: 'Validation Error',
-      errors
+      message: `Duplicate field: ${err.meta.target}`
     });
   }
 
-  // Mongoose duplicate key error
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0];
+  // Foreign key error
+  if (err.code === 'P2003') {
     return res.status(400).json({
       success: false,
-      message: `Duplicate value for ${field}. Please use another value.`
+      message: 'Invalid reference ID'
     });
   }
-
-  // Mongoose cast error (invalid ObjectId)
-  if (err.name === 'CastError') {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid ID format'
-    });
-  }
-
+}
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({

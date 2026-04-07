@@ -1,109 +1,68 @@
 /**
  * middleware/auth.middleware.js
- * JWT Authentication Middleware
  */
-
 const jwt = require('jsonwebtoken');
-const User = require('../models/User.model');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-/**
- * Verify JWT token and authenticate user
- */
+const crypto = require('crypto');
+
+const getUserSecret = (userId) => {
+  return crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(userId.toString())
+    .digest('hex');
+};
+
 const authMiddleware = async (req, res, next) => {
   try {
-    // Get token from header
     const token = req.headers.authorization?.replace('Bearer ', '');
-
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access denied. No token provided.'
-      });
+      return res.status(401).json({ success: false, message: 'No token' });
     }
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-    );
+    // Step 1: decode WITHOUT verifying
+    const decoded = jwt.decode(token);
+    if (!decoded?.userId) {
+      return res.status(401).json({ success: false, message: 'Invalid token structure' });
+    }
 
-    // Get user from database
-    const user = await User.findById(decoded.userId).select('-password');
+    // Step 2: compute correct secret
+    const secret = getUserSecret(decoded.userId);
+
+    // Step 3: verify with correct secret
+    const verified = jwt.verify(token, secret);
+
+    const user = await prisma.user.findUnique({
+      where: { id: verified.userId },
+      select: { id: true, email: true, role: true }
+    });
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token. User not found.'
-      });
+      return res.status(401).json({ success: false, message: 'User not found' });
     }
 
-    if (!user.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Account is deactivated.'
-      });
-    }
-
-    // Attach user to request
-    req.user = {
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role
-    };
-
+    req.user = user;
     next();
+
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token.'
-      });
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token has expired.'
-      });
-    }
-
-    console.error('Auth middleware error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Authentication error',
-      error: error.message
-    });
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
 };
 
-/**
- * Check if user is admin
- */
+// Role checks - Case insensitive to prevent Enum mismatches
 const adminOnly = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Access denied. Admin privileges required.'
-    });
+  if (req.user.role.toUpperCase() !== 'ADMIN') {
+    return res.status(403).json({ success: false, message: 'Admin privileges required.' });
   }
   next();
 };
 
-/**
- * Check if user is student
- */
 const studentOnly = (req, res, next) => {
-  if (req.user.role !== 'student') {
-    return res.status(403).json({
-      success: false,
-      message: 'Access denied. Student privileges required.'
-    });
+  if (req.user.role.toUpperCase() !== 'STUDENT') {
+    return res.status(403).json({ success: false, message: 'Student privileges required.' });
   }
   next();
 };
 
-module.exports = {
-  authMiddleware,
-  adminOnly,
-  studentOnly
-};
+module.exports = { authMiddleware, adminOnly, studentOnly };

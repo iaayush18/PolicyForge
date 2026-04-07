@@ -1,13 +1,12 @@
 /**
  * src/services/api.js
- * Centralized API Service with Axios
+ * Migrated for Prisma/PostgreSQL & Aligned with new Controllers
  */
 
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL ;
 
-// Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -15,7 +14,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor - Add token to all requests
+// Request interceptor - Standard JWT logic remains valid
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -24,17 +23,14 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor - Handle errors globally
+// Response interceptor - 401 handling is still critical for security
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - logout
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -50,27 +46,16 @@ api.interceptors.response.use(
 export const authAPI = {
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
+    // Note: Backend now returns user.id and uppercase Role (STUDENT/ADMIN)
     return response.data;
   },
 
-  register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
-  },
+verifyToken: async () => {
+  const response = await api.get('/auth/verify');
+  return response.data;
+},
+  
 
-  verifyToken: async () => {
-    const response = await api.get('/auth/verify');
-    return response.data;
-  },
-
-  changePassword: async (userId, currentPassword, newPassword) => {
-    const response = await api.post('/auth/change-password', {
-      userId,
-      currentPassword,
-      newPassword,
-    });
-    return response.data;
-  },
 };
 
 // ============================================================
@@ -94,6 +79,7 @@ export const studentAPI = {
   },
 
   create: async (studentData) => {
+    // Passwords are now hashed by the student service before Prisma create
     const response = await api.post('/students', studentData);
     return response.data;
   },
@@ -104,23 +90,17 @@ export const studentAPI = {
   },
 
   delete: async (id) => {
+    // This now triggers a Prisma Transaction (Assessments -> Student -> User)
     const response = await api.delete(`/students/${id}`);
     return response.data;
   },
 };
 
-// ============================================================
 // ASSESSMENT APIs
-// ============================================================
 
 export const assessmentAPI = {
   submit: async (assessmentData) => {
     const response = await api.post('/assessments', assessmentData);
-    return response.data;
-  },
-
-  getStudentHistory: async (studentId) => {
-    const response = await api.get(`/assessments/student/${studentId}`);
     return response.data;
   },
 
@@ -129,8 +109,8 @@ export const assessmentAPI = {
     return response.data;
   },
 
-  getCritical: async () => {
-    const response = await api.get('/assessments/critical');
+  getStudentHistory: async (studentId) => {
+    const response = await api.get(`/assessments/student/${studentId}`);
     return response.data;
   },
 
@@ -138,16 +118,9 @@ export const assessmentAPI = {
     const response = await api.get(`/assessments/${id}`);
     return response.data;
   },
-
-  delete: async (id) => {
-    const response = await api.delete(`/assessments/${id}`);
-    return response.data;
-  },
 };
 
-// ============================================================
 // DASHBOARD APIs
-// ============================================================
 
 export const dashboardAPI = {
   getStats: async () => {
@@ -165,25 +138,8 @@ export const dashboardAPI = {
     return response.data;
   },
 
-  getTrends: async (days = 30) => {
-    const response = await api.get('/dashboard/trends', { params: { days } });
-    return response.data;
-  },
-
-  getGenderStats: async () => {
-    const response = await api.get('/dashboard/gender-stats');
-    return response.data;
-  },
-
-  getCGPACorrelation: async () => {
-    const response = await api.get('/dashboard/cgpa-correlation');
-    return response.data;
-  },
-
-  getRecentAssessments: async (limit = 20) => {
-    const response = await api.get('/dashboard/recent-assessments', {
-      params: { limit },
-    });
+  getRecentActivity: async () => {
+    const response = await api.get('/dashboard/recent-activity');
     return response.data;
   },
 };
