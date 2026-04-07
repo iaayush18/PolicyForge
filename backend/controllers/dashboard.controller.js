@@ -18,8 +18,7 @@ const getStats = async (req, res, next) => {
       prisma.student.count({ 
         where: { 
           OR: [
-            { currentRiskScore: { lte: 1 } },
-            { currentRiskScore: null } 
+            { currentRiskScore: { lte: 1 } }
           ] 
         } 
       })
