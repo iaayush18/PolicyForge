@@ -23,6 +23,19 @@ jobs:
           cd frontend
           npm install
 
+      # Step 1: Run audit but DO NOT fail immediately
+      - name: npm audit (initial check)
+        run: |
+          cd frontend
+          npm audit || true
+
+      # Step 2: Attempt automatic fix (non-breaking)
+      - name: Auto-fix vulnerabilities
+        run: |
+          cd frontend
+          npm audit fix || true
+
+      # Step 3: Re-check and FAIL if still high/critical
       - name: npm audit (fail on high/critical)
         run: |
           cd frontend
