@@ -52,6 +52,8 @@ jobs:
 
       - name: Secret scan
         uses: gitleaks/gitleaks-action@v2
+        with:
+          args: --no-git --redact --exit-code=2
 
       # Ensure DB is ready before Prisma runs
       - name: Wait for Postgres
