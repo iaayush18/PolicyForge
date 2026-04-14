@@ -3,15 +3,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" 
-  url      = env("DATABASE_URL")
+  provider = "sqlite" 
+  url      = "file:./dev.db"
 }
 
 model User {
   id        String    @id @default(uuid())
   email     String    @unique
   password  String
-  role      Role      @default(STUDENT)
+  role      String    @default("STUDENT")
   isActive  Boolean   @default(true)
   lastLogin DateTime?
   createdAt DateTime  @default(now())
@@ -25,7 +25,7 @@ model Student {
   studentId          String       @unique
   name               String
   age                Int
-  gender             Gender
+  gender             String
   course             String
   cgpa               Float
   currentRiskScore   Int          @default(0)
@@ -61,15 +61,4 @@ model Assessment {
   @@index([studentId, createdAt])
   @@index([riskScore])
   @@index([isCritical])
-}
-
-enum Role {
-  ADMIN
-  STUDENT
-}
-
-enum Gender {
-  Male
-  Female
-  Other
 }

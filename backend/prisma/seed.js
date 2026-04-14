@@ -209,10 +209,13 @@ async function main() {
     });
   }
 
-  await prisma.user.createMany({
-    data: randomUsers,
-    skipDuplicates: true
-  });
+  for (const user of randomUsers) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {},
+      create: user
+    });
+  }
 
   console.log('🎲 Random users ensured');
 
