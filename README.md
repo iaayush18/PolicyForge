@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🧠 AI-Powered Student Mental Health Monitoring System
 
 A complete **MERN stack** web application for assessing and monitoring student mental well-being using the **PHQ-9 (Patient Health Questionnaire-9)** standard. Features role-based access control, real-time risk scoring, and comprehensive analytics dashboard.
@@ -444,7 +443,8 @@ This project is licensed under the MIT License - see LICENSE file for details.
 
 ---
 
-**Built with ❤️ for student mental health and wellbeing**#***REMOVED*** ***REMOVED***P***REMOVED***o***REMOVED***l***REMOVED***i***REMOVED***c***REMOVED***y***REMOVED***F***REMOVED***o***REMOVED***r***REMOVED***g***REMOVED***e***REMOVED******REMOVED***
+**Built with ❤️ for student mental health and wellbeing**#***REMOVED*** ***REMOVED***P***REMOVED***o***REMOVED***l***REMOVED***i***REMOVED***c***REMOVED***y***REMOVED***F***REMOVED***o***REMOVED***r***REMOVED***g***REMOVED***e***REMOVED***
+***REMOVED***
 ***REMOVED***
 =======
 # 🧠 AI-Powered Student Mental Health Monitoring System
