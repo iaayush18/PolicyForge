@@ -35,8 +35,10 @@ const Login = () => {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#0e0b29', color: '#fff' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          {/* Reuse the spinner from App.css if possible, or just plain text */}
-          <p style={{ fontFamily: 'sans-serif' }}>Loading application...</p>
+          {/* A refined loading text for the authentication portal */}
+          <p style={{ fontFamily: 'sans-serif', fontSize: '1.1rem', fontWeight: '500', letterSpacing: '0.5px' }}>
+            Loading Authentication Portal...
+          </p>
         </div>
       </div>
     );
