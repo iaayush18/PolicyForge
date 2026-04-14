@@ -20,4 +20,4 @@ COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 5000
-CMD sh -c "npx prisma migrate deploy && node server.js"
+CMD sh -c "npx prisma generate && npx prisma migrate deploy && node server.js"

@@ -4,7 +4,7 @@
  *       password visibility toggle, and a richer visual identity.
  *       Backend logic is unchanged.
  */
-require(dotenv).config();
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -118,10 +118,10 @@ const Login = () => {
     setError('');
     if (role === 'admin') {
       setEmail('admin@university.edu');
-      setPassword(process.env.ADMIN_PASSWORD);
+      setPassword('admin123');
     } else {
       setEmail('student1@university.edu');
-      setPassword(process.env.USER_PASSWORD);
+      setPassword('student123');
     };
   };
 

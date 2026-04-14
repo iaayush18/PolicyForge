@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: policyforge
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend_v1:
+    image: ghcr.io/PolicyForge/backend:v1
+    environment:
+  DATABASE_URL: postgresql://postgres:postgres@db:5432/policyforge
+    depends_on:
+      - db
+
+  backend_v2:
+    image: ghcr.io/PolicyForge/backend:v2
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      - db
+
+  frontend_v1:
+    image: ghcr.io/PolicyForge/frontend:v1
+
+  frontend_v2:
+    image: ghcr.io/PolicyForge/frontend:v2
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend_v1
+      - frontend_v2
+      - backend_v1
+      - backend_v2
+
+volumes:
+  db_data:
