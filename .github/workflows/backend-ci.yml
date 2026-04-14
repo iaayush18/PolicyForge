@@ -1,23 +1,24 @@
-name: Backend CI (Postgres + Prisma)
+name: Backend CI
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
+    branches:
+      - main
+      - v2
 
 jobs:
-  backend:
+  backend-ci:
     runs-on: ubuntu-latest
 
     services:
       postgres:
         image: postgres:15
-        ports:
-          - 5432:5432
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: mental_health
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
@@ -25,32 +26,57 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/mental_health
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      NODE_ENV: test
+      # IMPORTANT: override localhost issue
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mental_health
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: 📦 Install dependencies
-        run: npm install
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
 
-      - name: 🔧 Generate Prisma Client
-        run: npx prisma generate
+      - name: npm audit (fail on high/critical)
+        run: |
+          cd backend
+          npm audit --audit-level=high
 
-      - name: 🧱 Run Migrations
-        run: npx prisma migrate deploy
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: --no-git --redact --exit-code=2
 
-      - name: 🌱 Seed Database (Admin + Data)
-        run: npx prisma db seed
+      # Ensure DB is ready before Prisma runs
+      - name: Wait for Postgres
+        run: |
+          for i in {1..10}; do
+            nc -z localhost 5432 && echo "Postgres is up" && exit 0
+            echo "Waiting for Postgres..."
+            sleep 3
+          done
+          echo "Postgres failed to start"
+          exit 1
 
-  - name: 🐳 Build Backend Image
-    run: docker build -t backend:${{ github.sha }} ./backend
+      - name: Prisma generate
+        run: |
+          cd backend
+          npx prisma generate
+
+      - name: Prisma migrate
+        run: |
+          cd backend
+          npx prisma migrate deploy
+
+      - name: Seed DB
+        run: |
+          cd backend
+          npm run seed

@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+RUN npx prisma generate
 
 # Stage 2: Production
 FROM node:20-alpine
@@ -19,4 +20,4 @@ COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 5000
-CMD ["node", "server.js"]
+CMD sh -c "npx prisma generate && npx prisma migrate deploy && node server.js"

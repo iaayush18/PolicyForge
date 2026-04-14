@@ -1,0 +1,50 @@
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: policyforge
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Backend Services
+  Backend-Stable:
+    image: ghcr.io/aadityarj01/policyforge/backend:stable
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/policyforge
+    depends_on:
+      - db
+
+  Backend-Canary:
+    image: ghcr.io/aadityarj01/policyforge/backend:canary
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/policyforge
+    depends_on:
+      - db
+
+  # Frontend Services (Representing "App")
+  App-Stable:
+    image: ghcr.io/aadityarj01/policyforge/frontend:stable
+
+  App-Canary:
+    image: ghcr.io/aadityarj01/policyforge/frontend:canary
+
+  # Proxy
+  Nginx-Proxy:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - App-Stable
+      - App-Canary
+      - Backend-Stable
+      - Backend-Canary
+
+volumes:
+  db_data:

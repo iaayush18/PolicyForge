@@ -1,0 +1,55 @@
+name: Docker Build & Push to GHCR
+
+on:
+  push:
+    branches:
+      - main
+      - v2 # Assuming v2 branch represents canary/v2
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine tag and format names
+        id: pick_tag
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "tag=stable" >> $GITHUB_ENV
+          else
+            echo "tag=canary" >> $GITHUB_ENV
+          fi
+          # Docker requires image names to be entirely lowercase.
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME_FRONTEND=$REPO/frontend" >> $GITHUB_ENV
+          echo "IMAGE_NAME_BACKEND=$REPO/backend" >> $GITHUB_ENV
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ env.tag }}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ env.tag }}
