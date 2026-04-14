@@ -34,7 +34,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+        with:
+          # This fetches the entire history so Gitleaks 
+          # can find the commits it needs to scan.
+          fetch-depth: 0
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
