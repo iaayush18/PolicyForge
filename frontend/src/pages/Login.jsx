@@ -5,6 +5,7 @@
  *       Backend logic is unchanged.
  */
 
+require('dotenv').config();
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -118,11 +119,11 @@ const Login = () => {
     setError('');
     if (role === 'admin') {
       setEmail('admin@university.edu');
-      setPassword('admin123');
+      setPassword(import.meta.env.VITE_ADMIN_PASSWORD);
     } else {
       setEmail('student1@university.edu');
-      setPassword('student123');
-    }
+      setPassword(import.meta.env.VITE_USER_PASSWORD);
+    };
   };
 
   return (
