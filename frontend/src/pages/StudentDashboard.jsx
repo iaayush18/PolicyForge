@@ -1,215 +1,113 @@
-/**
- * src/pages/StudentDashboard.jsx
- */
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { assessmentAPI, studentAPI } from '../services/api';
-import { LogOut, RefreshCw, TrendingDown, TrendingUp, Calendar, BookOpen, Activity, Heart } from 'lucide-react';
+import { LogOut, RefreshCw, Activity, Calendar, Zap, Heart } from 'lucide-react';
 import { format } from 'date-fns';
 
 const RiskRing = ({ score, color }) => {
-  const radius = 54;
+  const radius = 50;
   const circumference = 2 * Math.PI * radius;
   const fraction = (score / 3);
   const dashoffset = circumference * (1 - fraction);
 
   return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg width="140" height="140" viewBox="0 0 140 140" className="risk-ring-svg">
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-        <circle cx="70" cy="70" r={radius} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashoffset} transform="rotate(-90 70 70)" style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', filter: `drop-shadow(0 0 8px ${color})` }} />
+    <div className="relative inline-flex items-center justify-center p-6 rounded-full bg-slate-800/50 border border-slate-700">
+      <svg width="130" height="130" viewBox="0 0 130 130">
+        <circle cx="65" cy="65" r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="12" />
+        <circle cx="65" cy="65" r={radius} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashoffset} transform="rotate(-90 65 65)" style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.19, 1, 0.22, 1)', filter: `drop-shadow(0 0 10px ${color}55)` }} />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-5xl font-black leading-none" style={{ color, letterSpacing: '-0.05em', textShadow: `0 0 30px ${color}` }}>{score}</span>
-        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mt-1">/ 3</span>
+        <span className="text-5xl font-black italic text-white" style={{ color }}>{score}</span>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">LEVEL</span>
       </div>
     </div>
   );
 };
 
-const StatBox = ({ icon: Icon, label, value, delay = 0 }) => (
-  <div className="stat-box-v2" style={{ animationDelay: `${delay}ms` }}>
-    <div className="stat-box-icon"><Icon size={16} /></div>
-    <p className="stat-box-label">{label}</p>
-    <p className="stat-box-value">{value ?? '—'}</p>
+const VibeStat = ({ icon: Icon, label, value }) => (
+  <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors shadow-sm">
+    <div className="flex items-center gap-2 mb-2 text-slate-400">
+      <Icon size={14} />
+      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+    </div>
+    <p className="text-xl font-bold text-white">{value ?? '—'}</p>
   </div>
 );
 
-const HistoryItem = ({ assessment, index, total, getRiskColor, getRiskLabel }) => {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true); }, { threshold: 0.1 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref} className={`history-item ${visible ? 'history-item-visible' : ''}`} style={{ transitionDelay: `${index * 50}ms` }}>
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0" style={{ background: `${getRiskColor(assessment.riskScore)}22`, border: `1px solid ${getRiskColor(assessment.riskScore)}44`, color: getRiskColor(assessment.riskScore) }}>
-          {assessment.riskScore}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-white/90">Check-in #{total - index}</p>
-          <p className="text-[10px] text-white/35 font-mono mt-0.5">
-            {format(new Date(assessment.createdAt), 'MMM d, yyyy · h:mm a')}
-          </p>
-        </div>
-      </div>
-      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg" style={{ color: getRiskColor(assessment.riskScore), background: `${getRiskColor(assessment.riskScore)}18`, border: `1px solid ${getRiskColor(assessment.riskScore)}40` }}>
-        {getRiskLabel(assessment.riskScore)}
-      </span>
-    </div>
-  );
-};
-
 const StudentDashboard = () => {
-  // FIX: Destructure updateStudentProfile so the context doesn't go stale
   const { student, logout, updateStudentProfile } = useAuth();
   const navigate = useNavigate();
-  const [assessmentHistory, setAssessmentHistory] = useState([]);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadAssessmentHistory(); }, []);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [hRes, pRes] = await Promise.all([assessmentAPI.getMyHistory(), studentAPI.getMyProfile()]);
+        setHistory(hRes.assessments || hRes.data || []);
+        if (updateStudentProfile && pRes) updateStudentProfile(pRes.student || pRes.data || pRes);
+      } catch (e) { console.error(e); } finally { setLoading(false); }
+    };
+    fetchData();
+  }, []);
 
-  const loadAssessmentHistory = async () => {
-    try {
-      const [historyRes, profileRes] = await Promise.all([
-        assessmentAPI.getMyHistory(),
-        studentAPI.getMyProfile(),
-      ]);
-      
-      // FIX: Robust API property checks based on Express backend patterns
-      setAssessmentHistory(historyRes.assessments || historyRes.data || []);
-      
-      if (updateStudentProfile && profileRes) {
-        updateStudentProfile(profileRes.student || profileRes.data || profileRes);
-      }
-    } catch (error) {
-      console.error('Error loading assessment history:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getRiskColor = (s) => ({ 0: '#10b981', 1: '#06b6d4', 2: '#f59e0b', 3: '#ef4444' }[s] || '#94a3b8');
+  const getRiskLabel = (s) => ({ 0: 'OPTIMAL', 1: 'STABLE', 2: 'MODERATE', 3: 'CRITICAL' }[s] || 'UNKNOWN');
 
-  const getRiskColor = (score) => ({ 0: '#10B981', 1: '#FBBF24', 2: '#F97316', 3: '#EF4444' }[score] || '#6B7280');
-  const getRiskLabel = (score) => ({ 0: 'Minimal Depression', 1: 'Mild Depression', 2: 'Moderate Depression', 3: 'Severe' }[score] || 'Unknown');
-  const getMotivationalMessage = (score) => ({
-    0: "You're doing great! Keep maintaining your healthy habits.",
-    1: "Stay connected with friends. Consider stress management techniques.",
-    2: "Please consider speaking with a counselor. Support is available.",
-    3: "🚨 Immediate support recommended. Please contact counseling today.",
-  }[score] || "Take care of your mental health.");
+  if (loading || !student) return <div className="app-bg min-h-screen flex items-center justify-center font-mono text-cyan-400">SYNCING DATA...</div>;
 
-  if (loading || !student) {
-    return (
-      <div className="min-h-screen flex items-center justify-center app-bg">
-        <div className="glass p-10 text-center">
-          <div className="relative w-14 h-14 mx-auto mb-5">
-            <div className="absolute inset-0 rounded-full border-2 border-white/10" />
-            <div className="absolute inset-0 rounded-full border-2 border-t-violet-400 border-r-cyan-400 animate-spin" />
-            <Heart className="absolute inset-0 m-auto text-white/50" size={20} />
-          </div>
-          <p className="text-white/60 text-sm font-medium">Loading your dashboard…</p>
-        </div>
-      </div>
-    );
-  }
-
-  const riskScore = student.currentRiskScore || 0;
-  const riskColor = getRiskColor(riskScore);
+  const riskColor = getRiskColor(student.currentRiskScore || 0);
 
   return (
-    <div className="min-h-screen app-bg text-white pb-16">
-      <nav className="glass sticky top-0 z-50 px-6 py-3 rounded-none border-b-0 shadow-2xl">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
+    <div className="min-h-screen app-bg pb-20">
+      <nav className="vibe-nav">
+        <div className="max-w-6xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${riskColor}aa, ${riskColor}55)`, boxShadow: `0 0 14px ${riskColor}40` }}>
-              <Heart size={15} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-black tracking-tight leading-none">Mental Health Portal</h1>
-              <p className="text-[10px] text-white/40 mt-0.5">Welcome back, <span className="text-white/70 font-semibold">{student.name}</span></p>
-            </div>
+            <div className="w-10 h-10 bg-cyan-500 text-white flex items-center justify-center rounded-xl font-black italic">W</div>
+            <h1 className="text-lg text-white">WELLNESS<span className="text-cyan-400">VIBE</span></h1>
           </div>
-          <button onClick={logout} className="flex items-center gap-2 bg-white/8 hover:bg-white/14 px-4 py-1.5 rounded-xl transition border border-white/12 text-sm font-medium">
-            <LogOut size={15} /> Logout
-          </button>
+          <button onClick={logout} className="vibe-btn-secondary text-xs flex items-center gap-2 text-slate-300"><LogOut size={14}/> EXIT</button>
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 pt-8 space-y-6">
-        <div className="glass-strong p-8 relative overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 70% 60% at 50% 0%, ${riskColor}18 0%, transparent 70%)` }} />
-          <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-            <div className="flex-shrink-0 flex flex-col items-center gap-3">
-              <RiskRing score={riskScore} color={riskColor} />
-              <div className="text-center">
-                <p className="text-sm font-bold" style={{ color: riskColor }}>{getRiskLabel(riskScore)}</p>
-                <p className="text-[10px] text-white/35 font-black uppercase tracking-widest mt-1">Current Risk Score</p>
-              </div>
+      <div className="max-w-6xl mx-auto px-6 pt-10 space-y-8">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Hello, {student.name}</h2>
+          <p className="text-slate-400 text-sm font-mono mt-1">ID: {student.studentId} {student.course ? `• ${student.course}` : ''}</p>
+        </div>
+        <div className="glass-strong p-10 flex flex-col md:flex-row items-center gap-12">
+          <RiskRing score={student.currentRiskScore || 0} color={riskColor} />
+          <div className="flex-1 w-full space-y-6 text-center md:text-left">
+            <div>
+              <p className="text-cyan-400 font-mono text-xs mb-2 tracking-[0.2em] uppercase">Status Analysis</p>
+              <h2 className="text-5xl mb-2 text-white">{getRiskLabel(student.currentRiskScore || 0)}</h2>
+              <p className="text-slate-400 max-w-lg">Current data suggests your wellness levels are within the {getRiskLabel(student.currentRiskScore || 0).toLowerCase()} range.</p>
             </div>
-            <div className="flex-1 w-full">
-              <div className="rounded-2xl p-5 mb-6" style={{ background: `${riskColor}10`, border: `1px solid ${riskColor}30` }}>
-                <p className="text-sm text-white/85 leading-relaxed italic">"{getMotivationalMessage(riskScore)}"</p>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatBox icon={Calendar} label="Last Checkup" value={student.lastAssessmentDate ? format(new Date(student.lastAssessmentDate), 'MMM d') : 'Never'} delay={0} />
-                <StatBox icon={BookOpen} label="Course" value={student.course} delay={60} />
-                <StatBox icon={TrendingUp} label="CGPA" value={student.cgpa} delay={120} />
-                <StatBox icon={Activity} label="Check-ins" value={student.totalAssessments} delay={180} />
-              </div>
-              <button onClick={() => navigate('/student/assessment')} className="w-full mt-5 py-3.5 rounded-2xl font-black text-sm tracking-wide flex items-center justify-center gap-2.5 transition-all active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #fff 0%, #e8e4ff 100%)', color: '#2d1b8f', boxShadow: '0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
-                <RefreshCw size={17} />
-                {student.totalAssessments > 0 ? 'Update My Assessment' : 'Take First Assessment'}
-              </button>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <VibeStat icon={Calendar} label="Last Scan" value={student.lastAssessmentDate ? format(new Date(student.lastAssessmentDate), 'MMM d') : '—'} />
+              <VibeStat icon={Zap} label="Activity" value={student.totalAssessments} />
+              <VibeStat icon={Heart} label="CGPA" value={student.cgpa} />
+              <VibeStat icon={Activity} label="Risk" value={student.currentRiskScore} />
             </div>
+            <button onClick={() => navigate('/student/assessment')} className="vibe-btn-primary w-full md:w-auto"><RefreshCw size={18}/> Update Assessment</button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="glass p-6 h-full">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-black flex items-center gap-2"><TrendingDown size={18} className="text-white/60" /> Assessment History</h3>
-                <span className="text-[10px] font-mono text-white/30">{assessmentHistory.length} records</span>
-              </div>
-              {assessmentHistory.length > 0 ? (
-                <div className="space-y-2">
-                  {assessmentHistory.map((a, i) => (
-                    <HistoryItem key={a._id || i} assessment={a} index={i} total={assessmentHistory.length} getRiskColor={getRiskColor} getRiskLabel={getRiskLabel} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-white/25">
-                  <Activity size={32} className="mb-3 opacity-40" />
-                  <p className="text-sm">No assessments yet.</p>
-                  <p className="text-xs mt-1">Take your first check-in above.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="glass p-5">
-              <h3 className="text-xs font-black uppercase tracking-widest text-white/50 mb-4">Risk Guide</h3>
-              <div className="space-y-2">
-                {[{ score: 0, label: 'Minimal', color: '#10B981' }, { score: 1, label: 'Mild', color: '#FBBF24' }, { score: 2, label: 'Moderate', color: '#F97316' }, { score: 3, label: 'Severe', color: '#EF4444' }].map(({ score, label, color }) => (
-                  <div key={score} className="flex items-center gap-3 p-2.5 rounded-xl transition-all" style={{ background: riskScore === score ? `${color}12` : 'rgba(255,255,255,0.03)', border: `1px solid ${riskScore === score ? color + '35' : 'rgba(255,255,255,0.06)'}` }}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-black text-xs flex-shrink-0" style={{ background: `${color}22`, color }}>{score}</div>
-                    <p className="text-xs font-semibold text-white/75">{label}</p>
-                    {riskScore === score && <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color, background: `${color}20` }}>You</span>}
+        <div className="glass p-8">
+          <h3 className="mb-6 flex items-center gap-3 text-white"><Activity size={20} className="text-cyan-400" /> Activity History</h3>
+          <div className="space-y-3">
+            {history.map((a, i) => (
+              <div key={i} className="flex items-center justify-between p-4 bg-slate-800/60 rounded-xl border border-slate-700 shadow-sm hover:border-cyan-500/50 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-8 rounded-full" style={{ backgroundColor: getRiskColor(a.riskScore) }} />
+                  <div>
+                    <p className="font-bold text-sm text-white">LEVEL {a.riskScore} — {getRiskLabel(a.riskScore)}</p>
+                    <p className="font-mono text-[10px] text-slate-400 uppercase">{format(new Date(a.createdAt), 'MMM d, yyyy | p')}</p>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-            <div className="glass p-5" style={{ border: '1px solid rgba(139,120,255,0.2)', background: 'rgba(139,120,255,0.06)' }}>
-              <p className="text-xs font-black uppercase tracking-widest text-violet-300/70 mb-2">Need Support?</p>
-              <p className="text-xs text-white/50 mb-4 leading-relaxed">Confidential help is always available. You are not alone.</p>
-              <a href="mailto:counseling@university.edu" className="block text-center text-xs font-bold py-2.5 px-4 rounded-xl transition-all" style={{ background: 'rgba(139,120,255,0.15)', border: '1px solid rgba(139,120,255,0.3)', color: '#a78bfa' }}>counseling@university.edu</a>
-            </div>
+            ))}
           </div>
         </div>
       </div>
