@@ -1,9 +1,7 @@
 // services/student.service.js
 
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const bcrypt = require('bcryptjs');
-
-const prisma = new PrismaClient();
 
 /**
  * Create Student (Admin)

@@ -85,11 +85,11 @@ const getStudentHistory = async (req, res, next) => {
 // @access  Private (Owner/Admin)
 const getAssessmentById = async (req, res, next) => {
   try {
-    // Inside getAssessmentById controller
+    const assessment = await assessmentService.getAssessmentById(req.params.id);
+    
    if (req.user.role !== 'ADMIN' && assessment.studentId !== req.user.id) {
       return res.status(403).json({ message: "You can only view your own assessments" });
     }
-    const assessment = await assessmentService.getAssessmentById(req.params.id);
      
     res.json({
       success: true,

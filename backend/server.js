@@ -7,10 +7,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./utils/prisma');
 console.log("DB URL:", process.env.DATABASE_URL);
-// Init Prisma
-const prisma = new PrismaClient();
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');

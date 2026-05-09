@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
 
           // 2. Postgres Enum Check: role is now 'STUDENT' (uppercase)
-          if (userObj.role === 'STUDENT') {
+          if (userObj.role?.toUpperCase() === 'STUDENT') {
             const response = await studentAPI.getMyProfile();
             // student.service.js returns { student, latestAssessment }
             setStudent(response.student);
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
 
       // ✅ FIX: Fetch profile immediately if the user is a student
-      if (userData.role === 'STUDENT') {
+      if (userData.role?.toUpperCase() === 'STUDENT') {
         const profileRes = await studentAPI.getMyProfile();
         setStudent(profileRes.student);
       }
@@ -99,8 +99,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     // Helper getters updated for Postgres Enums
-    isAdmin: user?.role === 'ADMIN',
-    isStudent: user?.role === 'STUDENT',
+    isAdmin: user?.role?.toUpperCase() === 'ADMIN',
+    isStudent: user?.role?.toUpperCase() === 'STUDENT',
     login,
     logout,
     updateStudentProfile,

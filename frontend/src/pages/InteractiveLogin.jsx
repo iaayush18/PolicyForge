@@ -119,7 +119,7 @@ const InteractiveLogin = () => {
       return result;
     },
     onSuccess: (data) => {
-      if (data.user.role === 'ADMIN') {
+      if (data.user.role?.toUpperCase() === 'ADMIN') {
         navigate('/admin');
       } else {
         navigate('/student');

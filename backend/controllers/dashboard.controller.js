@@ -3,8 +3,7 @@
  * Logic for Dashboard Analytics - Migrated to Prisma
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 
 // @desc    Get top-level statistics
 // @route   GET /api/dashboard/stats
