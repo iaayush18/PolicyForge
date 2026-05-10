@@ -6,19 +6,28 @@ on:
       - main
       - v2
 
+  pull_request:
+    branches:
+      - main
+      - v2
+
 jobs:
   backend-ci:
+
     runs-on: ubuntu-latest
 
     services:
       postgres:
         image: postgres:15
+
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: mental_health
+
         ports:
           - 5432:5432
+
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
@@ -26,69 +35,50 @@ jobs:
           --health-retries=5
 
     env:
-      # IMPORTANT: override localhost issue
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mental_health
-      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-      USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+      JWT_SECRET: testsecret
+      ADMIN_PASSWORD: admin123
+      USER_PASSWORD: Welcome123
+      NODE_ENV: test
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          # This fetches the entire history so Gitleaks 
-          # can find the commits it needs to scan.
-          fetch-depth: 0
-          ref: ${{ github.head_ref }}
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Install dependencies
-        run: |
-          cd backend
-          npm install
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: npm ci
 
-      - name: npm audit (fail on high/critical)
-        run: |
-          cd backend
-          npm audit --audit-level=high
-
-      - name: Secret scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          # Optional but highly recommended: Only fail the build if the secret is ACTUALLY live/valid
-          extra_args: --only-verified
-
-      # Ensure DB is ready before Prisma run
-      # 1. Ensure DB is ready before Prisma runs
-      - name: Wait for Postgres
-        run: |
-          for i in {1..10}; do
-            nc -z localhost 5432 && echo "Postgres is up" && exit 0
-            echo "Waiting for Postgres..."
-            sleep 3
-          done
-          echo "Postgres failed to start"
-          exit 1
-
-      # 2. Generate Prisma Client
-      - name: Prisma generate
+      - name: Prisma Generate
         working-directory: ./backend
         run: npx prisma generate
 
-      # 3. Create the Tables (Using db push for CI reliability)
-      - name: Push Database Schema
+      - name: Push Schema
         working-directory: ./backend
         run: npx prisma db push
-        env:
-          # Match this to however your Postgres service container is configured
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/policyforge
 
-      # 4. Seed the Database
-      - name: Seed DB
+      - name: Seed Database
         working-directory: ./backend
         run: npm run seed
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/policyforge
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: npm test
+
+      - name: Audit Dependencies
+        working-directory: ./backend
+        run: npm audit --audit-level=high
+
+      - name: Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --only-verified
