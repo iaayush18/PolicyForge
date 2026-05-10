@@ -1,54 +1,61 @@
-import { NextResponse } from 'next/server';
-
 export const config = {
   matcher: '/((?!api).*)',
 };
 
 const CANARY_URL = 'https://policyforge-v2.vercel.app';
 
-export default function middleware(request) {
+export default async function middleware(request) {
 
-  const url = request.nextUrl;
+  const url = new URL(request.url);
 
-  // Existing cookie
-  const versionCookie =
-    request.cookies.get('app-version')?.value;
+  const cookieHeader =
+    request.headers.get('cookie') || '';
 
-  let version = versionCookie;
+  let version = null;
 
-  // 60-40 assignment
-  if (!version) {
-    version = Math.random() < 0.6
-      ? 'stable'
-      : 'canary';
+  if (cookieHeader.includes('app-version=canary')) {
+    version = 'canary';
+
+  } else if (
+    cookieHeader.includes('app-version=stable')
+  ) {
+    version = 'stable';
   }
 
-  let response;
+  // 60-40 split
+  if (!version) {
 
-  // Canary traffic
-  if (version === 'canary') {
+    version =
+      Math.random() < 0.6
+        ? 'stable'
+        : 'canary';
+  }
 
-    const rewriteUrl = new URL(
-      url.pathname + url.search,
-      CANARY_URL
+  // Stable traffic
+  if (version === 'stable') {
+
+    const response = await fetch(request);
+
+    response.headers.set(
+      'Set-Cookie',
+      `app-version=stable; Path=/; Max-Age=2592000; SameSite=Lax; Secure`
     );
 
-    response = NextResponse.rewrite(rewriteUrl);
-
-  } else {
-
-    response = NextResponse.next();
+    return response;
   }
 
-  // Persist assignment
-  response.cookies.set({
-    name: 'app-version',
-    value: version,
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-    path: '/',
-    secure: true,
-    sameSite: 'lax',
-  });
+  // Canary traffic
+  const rewriteUrl = new URL(
+    url.pathname + url.search,
+    CANARY_URL
+  );
+
+  const response = await fetch(rewriteUrl, request);
+
+  response.headers.set(
+    'Set-Cookie',
+    `app-version=canary; Path=/; Max-Age=2592000; SameSite=Lax; Secure`
+  );
 
   return response;
 }
