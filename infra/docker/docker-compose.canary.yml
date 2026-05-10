@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: policyforge-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: policyforge
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  backend_v1:
+    image: ghcr.io/${GHCR_OWNER}/policyforge/backend:stable
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/policyforge
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - db
+    networks:
+      - app-net
+
+  backend_v2:
+    image: ghcr.io/${GHCR_OWNER}/policyforge/backend:canary
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/policyforge
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - db
+    networks:
+      - app-net
+
+  frontend_v1:
+    image: ghcr.io/${GHCR_OWNER}/policyforge/frontend:stable
+    depends_on:
+      - backend_v1
+    networks:
+      - app-net
+
+  frontend_v2:
+    image: ghcr.io/${GHCR_OWNER}/policyforge/frontend:canary
+    depends_on:
+      - backend_v2
+    networks:
+      - app-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: policyforge-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend_v1
+      - frontend_v2
+    networks:
+      - app-net
+
+volumes:
+  db_data:
+
+networks:
+  app-net:
