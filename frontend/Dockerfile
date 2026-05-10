@@ -1,25 +1,27 @@
-FROM node:20-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-
+# Stage 1: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY package*.json ./
+RUN npm install
 COPY . .
+# Generate the client here, so it gets baked into node_modules
+RUN npx prisma generate 
 
-ARG VITE_API_URL=http://localhost:5000/api
-ENV VITE_API_URL=$VITE_API_URL
+# Stage 2: Production
+FROM node:20-alpine
+WORKDIR /app
+# Copy the node_modules that already contains the generated Prisma client
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/server.js ./server.js
+COPY --from=builder /app/middleware ./middleware
+COPY --from=builder /app/services ./services
+COPY --from=builder /app/utils ./utils
+COPY --from=builder /app/controllers ./controllers
+COPY --from=builder /app/routes ./routes
+COPY --from=builder /app/prisma ./prisma
 
-# Security checks
-RUN npm audit --audit-level=high || true
-RUN npm run lint || true
+EXPOSE 5000
 
-RUN npm run build
-
-FROM nginx:alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Only run migrations and start the server.
+CMD sh -c "npx prisma migrate deploy && npx prisma db seed && node server.js"
