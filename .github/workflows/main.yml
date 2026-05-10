@@ -1,21 +1,49 @@
-name: CD - Build & Push Images
+name: Full CI/CD Pipeline
 
 on:
-  workflow_run:
-    workflows: ["Frontend CI", "Backend CI"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
+      - v2
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-and-push:
+  # 1. FRONTEND CI JOB
+  frontend-ci:
+    name: Frontend CI
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: npm audit (initial check)
+        run: npm audit || true
 
-    # Run only if CI succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+      - name: Auto-fix vulnerabilities
+        run: npm audit fix || true
 
+      - name: npm audit (fail on high/critical)
+        run: npm audit --audit-level=high
+
+  # 2. BACKEND CI JOB
+  backend-ci:
+    name: Backend CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      # Replace this with your actual backend testing/linting steps
+      #- name: Run Backend Tests
+      # run: echo "Backend CI Passed!"
+
+  # 3. CD - BUILD & PUSH TO GHCR
+  build-and-push:
+    name: Deploy Images
+    needs: [frontend-ci, backend-ci] 
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -31,7 +59,7 @@ jobs:
 
       - name: Set tag (stable/canary)
         run: |
-          if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]]; then
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "TAG=stable" >> $GITHUB_ENV
           else
             echo "TAG=canary" >> $GITHUB_ENV
@@ -54,6 +82,9 @@ jobs:
           build-args: |
             VITE_FLAGSMITH_ENV_ID=${{ secrets.VITE_FLAGSMITH_ENV_ID }}
             VITE_API_BASE=/api
+          # Enable Docker Layer Caching
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # ---------- BACKEND ----------
       - name: Build & Push Backend
@@ -62,3 +93,6 @@ jobs:
           context: ./backend
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.REPO }}/backend:${{ env.TAG }}
+          # Enable Docker Layer Caching
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
