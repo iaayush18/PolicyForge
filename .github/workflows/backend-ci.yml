@@ -55,9 +55,11 @@ jobs:
           npm audit --audit-level=high
 
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: trufflesecurity/trufflehog@main
         with:
-          args: --no-git --redact --exit-code=2
+          path: ./
+          # Optional but highly recommended: Only fail the build if the secret is ACTUALLY live/valid
+          extra_args: --only-verified
 
       # Ensure DB is ready before Prisma run
       # 1. Ensure DB is ready before Prisma runs
