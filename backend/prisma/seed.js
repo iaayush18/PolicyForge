@@ -1,230 +1,208 @@
 /**
  * prisma/seed.js
- * Idempotent + demo-ready seed script
+ * Seed script for PostgreSQL (Prisma)
  */
 
 require('dotenv').config();
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
-const TOTAL_RANDOM_STUDENTS = 10; // optional bulk data
+const TOTAL_RANDOM_STUDENTS = 20;
 
-// ---------- Helpers ----------
-const courses = [
+const firstNames = [
+  'Aarav', 'Vivaan', 'Aditya', 'Arjun', 'Krishna',
+  'Rohan', 'Rahul', 'Karan', 'Ishaan', 'Aniket',
+  'Ayaan', 'Siddharth', 'Varun', 'Harsh', 'Yash',
+  'Priya', 'Ananya', 'Aditi', 'Sneha', 'Kavya',
+  'Pooja', 'Riya', 'Meera', 'Diya', 'Nisha',
+  'Neha', 'Isha', 'Tanvi', 'Shreya', 'Anjali'
+];
+
+const lastNames = [
+  'Sharma', 'Verma', 'Patel', 'Reddy', 'Nair',
+  'Gupta', 'Joshi', 'Kulkarni', 'Yadav', 'Singh',
+  'Agarwal', 'Choudhary', 'Kapoor', 'Malhotra', 'Bhat',
+  'Mishra', 'Pandey', 'Rao', 'Das', 'Iyer'
+];
+
+const indianCourses = [
   'Computer Science',
+  'Information Science',
+  'Artificial Intelligence',
   'Mechanical Engineering',
-  'Business Administration',
-  'Medicine',
-  'Psychology',
   'Civil Engineering',
+  'Electronics and Communication',
+  'Business Administration',
   'Biotechnology'
 ];
 
-const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn'];
-const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia'];
+// Helpers
+const randomItem = (arr) =>
+  arr[Math.floor(Math.random() * arr.length)];
 
-const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const generateName = () => `${randomItem(firstNames)} ${randomItem(lastNames)}`;
+const generateName = () =>
+  `${randomItem(firstNames)} ${randomItem(lastNames)}`;
 
-// ---------- Main ----------
 async function main() {
-  console.log('🌱 Seeding database (idempotent)...');
 
-  // =========================
-  // PASSWORDS (HASH ONCE)
-  // =========================
-  const adminPasswordStr = process.env.ADMIN_PASSWORD || 'admin123';
-  const userPasswordStr = process.env.USER_PASSWORD || 'Welcome123';
-  const adminPassword = await bcrypt.hash(adminPasswordStr, 10);
-  const userPassword = await bcrypt.hash(userPasswordStr, 10);
+  console.log('🌱 Seeding database...');
 
-  // =========================
-  // 1. ADMIN (UPSERT)
-  // =========================
+  // Hash password once
+  const userPassword = await bcrypt.hash('Welcome123', 10);
+
+  // Create admin
   await prisma.user.upsert({
-    where: { email: 'admin@university.edu' },
+    where: {
+      email: 'admin@university.edu'
+    },
     update: {},
     create: {
       email: 'admin@university.edu',
-      password: adminPassword,
+      password: userPassword,
       role: 'ADMIN'
     }
   });
 
-  console.log('👤 Admin ensured');
+  // Create students
+  for (let i = 1; i <= TOTAL_RANDOM_STUDENTS; i++) {
 
-  // =========================
-  // 2. DEMO USERS
-  // =========================
-  const student1User = await prisma.user.upsert({
-    where: { email: 'student1@university.edu' },
-    update: {},
-    create: {
-      email: 'student1@university.edu',
-      password: userPassword,
-      role: 'STUDENT'
-    }
-  });
+    const email = `student${i}@university.edu`;
+    const studentId = `STU${String(i).padStart(4, '0')}`;
 
-  const student2User = await prisma.user.upsert({
-    where: { email: 'student2@university.edu' },
-    update: {},
-    create: {
-      email: 'student2@university.edu',
-      password: userPassword,
-      role: 'STUDENT'
-    }
-  });
-
-  console.log('👥 Demo users ensured');
-
-  // =========================
-  // 3. DEMO STUDENT PROFILES
-  // =========================
-  const student1 = await prisma.student.upsert({
-    where: { studentId: 'STU0001' },
-    update: {},
-    create: {
-      userId: student1User.id,
-      studentId: 'STU0001',
-      name: 'Alex Smith',
-      age: 20,
-      gender: 'Male',
-      course: 'Computer Science',
-      cgpa: 8.2
-    }
-  });
-
-  const student2 = await prisma.student.upsert({
-    where: { studentId: 'STU0002' },
-    update: {},
-    create: {
-      userId: student2User.id,
-      studentId: 'STU0002',
-      name: 'Taylor Johnson',
-      age: 21,
-      gender: 'Female',
-      course: 'Psychology',
-      cgpa: 7.8
-    }
-  });
-
-  console.log('🎓 Demo students ensured');
-
-  // =========================
-  // 4. DEMO ASSESSMENTS (RESET ONLY THESE)
-  // =========================
-  await prisma.assessment.deleteMany({
-    where: {
-      studentId: {
-        in: [student1.id, student2.id]
+    // User
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        password: userPassword,
+        role: 'STUDENT'
       }
-    }
-  });
-
-  // Student 1 (improving)
-  const student1Assessments = [
-    {
-      studentId: student1.id,
-      q1_interest: 2, q2_depressed: 2, q3_sleep: 2,
-      q4_energy: 2, q5_appetite: 1, q6_failure: 2,
-      q7_concentration: 1, q8_movement: 1, q9_suicidal: 0,
-      rawScore: 13,
-      riskScore: 2,
-      riskLevel: 'Moderate Depression',
-      isCritical: false,
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    },
-    {
-      studentId: student1.id,
-      q1_interest: 1, q2_depressed: 1, q3_sleep: 1,
-      q4_energy: 1, q5_appetite: 1, q6_failure: 1,
-      q7_concentration: 1, q8_movement: 0, q9_suicidal: 0,
-      rawScore: 7,
-      riskScore: 1,
-      riskLevel: 'Mild Depression',
-      isCritical: false,
-      createdAt: new Date()
-    }
-  ];
-
-  // Student 2 (critical)
-  const student2Assessments = [
-    {
-      studentId: student2.id,
-      q1_interest: 3, q2_depressed: 3, q3_sleep: 3,
-      q4_energy: 3, q5_appetite: 2, q6_failure: 3,
-      q7_concentration: 2, q8_movement: 2, q9_suicidal: 2,
-      rawScore: 23,
-      riskScore: 3,
-      riskLevel: 'Moderately Severe/Severe',
-      isCritical: true,
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-    }
-  ];
-
-  await prisma.assessment.createMany({
-    data: [...student1Assessments, ...student2Assessments]
-  });
-
-  console.log('📊 Demo assessments inserted');
-
-  // =========================
-  // 5. UPDATE DEMO STATS
-  // =========================
-  const demoStudents = [student1, student2];
-
-  for (const student of demoStudents) {
-    const latest = await prisma.assessment.findFirst({
-      where: { studentId: student.id },
-      orderBy: { createdAt: 'desc' }
     });
 
-    const count = await prisma.assessment.count({
-      where: { studentId: student.id }
+    const gender =
+      Math.random() > 0.5 ? 'Male' : 'Female';
+
+    // Student
+    const student = await prisma.student.upsert({
+      where: { studentId },
+      update: {},
+      create: {
+        userId: user.id,
+        studentId,
+        name: generateName(),
+        age: Math.floor(Math.random() * 5) + 18,
+        gender,
+        course: randomItem(indianCourses),
+        cgpa: Number((Math.random() * 3 + 6).toFixed(2))
+      }
     });
+
+    // Remove old assessments
+    await prisma.assessment.deleteMany({
+      where: {
+        studentId: student.id
+      }
+    });
+
+    const totalAssessments =
+      Math.floor(Math.random() * 3) + 1;
+
+    // Create assessments
+    for (let j = 0; j < totalAssessments; j++) {
+
+      const rawScore =
+        Math.floor(Math.random() * 25);
+
+      let riskScore = 0;
+      let riskLevel = 'Minimal';
+      let isCritical = false;
+
+      if (rawScore >= 20) {
+        riskScore = 3;
+        riskLevel = 'Severe Depression';
+        isCritical = true;
+
+      } else if (rawScore >= 15) {
+        riskScore = 2;
+        riskLevel = 'Moderate Depression';
+
+      } else if (rawScore >= 8) {
+        riskScore = 1;
+        riskLevel = 'Mild Depression';
+      }
+
+      await prisma.assessment.create({
+        data: {
+          studentId: student.id,
+
+          q1_interest: Math.floor(Math.random() * 4),
+          q2_depressed: Math.floor(Math.random() * 4),
+          q3_sleep: Math.floor(Math.random() * 4),
+          q4_energy: Math.floor(Math.random() * 4),
+          q5_appetite: Math.floor(Math.random() * 4),
+          q6_failure: Math.floor(Math.random() * 4),
+          q7_concentration: Math.floor(Math.random() * 4),
+          q8_movement: Math.floor(Math.random() * 4),
+          q9_suicidal: Math.floor(Math.random() * 3),
+
+          rawScore,
+          riskScore,
+          riskLevel,
+          isCritical,
+
+          createdAt: new Date(
+            Date.now() -
+            Math.floor(Math.random() * 30) *
+            24 * 60 * 60 * 1000
+          )
+        }
+      });
+    }
+
+    // Update stats
+    const latest =
+      await prisma.assessment.findFirst({
+        where: {
+          studentId: student.id
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+    const count =
+      await prisma.assessment.count({
+        where: {
+          studentId: student.id
+        }
+      });
 
     await prisma.student.update({
-      where: { id: student.id },
+      where: {
+        id: student.id
+      },
       data: {
-        currentRiskScore: latest?.riskScore || 0,
-        lastAssessmentDate: latest?.createdAt || null,
+        currentRiskScore:
+          latest?.riskScore || 0,
+
+        lastAssessmentDate:
+          latest?.createdAt || null,
+
         totalAssessments: count
       }
     });
+
+    console.log(`✅ Created ${studentId}`);
   }
 
-  console.log('📈 Demo stats updated');
-
-  // =========================
-  // 6. OPTIONAL RANDOM STUDENTS
-  // =========================
-  const randomUsers = [];
-
-  for (let i = 3; i < 3 + TOTAL_RANDOM_STUDENTS; i++) {
-    randomUsers.push({
-      email: `student${i}@university.edu`,
-      password: userPassword,
-      role: 'STUDENT'
-    });
-  }
-
-  for (const user of randomUsers) {
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: {},
-      create: user
-    });
-  }
-
-  console.log('🎲 Random users ensured');
-
-  console.log('\n✅ Seeding completed');
+  console.log('🎓 20 Indian demo students created');
 }
 
-// ---------- Run ----------
+// Run
 main()
   .catch((e) => {
     console.error('❌ Error seeding:', e);
