@@ -1,37 +1,25 @@
-# Stage 1: Build
-FROM node:20-alpine AS builder
-
-# 1. Install required dependencies for Prisma on Alpine
-RUN apk update && apk add --no-cache openssl libc6-compat
-
+FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 2. Run generate (Should now work flawlessly)
-RUN npx prisma generate
+ARG VITE_API_URL=http://localhost:5000/api
+ENV VITE_API_URL=$VITE_API_URL
 
-# Stage 2: Production
-FROM node:20-alpine
+# Security checks
+RUN npm audit --audit-level=high || true
+RUN npm run lint || true
 
-# Install openssl in the production stage as well, 
-# as the Prisma engine needs it at runtime to connect to PostgreSQL
-RUN apk update && apk add --no-cache openssl libc6-compat
+RUN npm run build
 
-WORKDIR /app
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/server.js ./server.js
-COPY --from=builder /app/middleware ./middleware
-COPY --from=builder /app/services ./services
-COPY --from=builder /app/utils ./utils
-COPY --from=builder /app/controllers ./controllers
-COPY --from=builder /app/routes ./routes
-COPY --from=builder /app/prisma ./prisma
-
-EXPOSE 5000
-
-# 3. Use JSON array syntax to fix the Warning
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node server.js"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,31 +1,45 @@
-# Stage 1: Build
+# =========================
+# Stage 1: Builder
+# =========================
 FROM node:20-alpine AS builder
+
 WORKDIR /app
-#Install OpenSSL (Required for Prisma on Alpine)
-RUN apk add --update --no-cache openssl
+
+# Prisma needs openssl
+RUN apk add --no-cache openssl
+
+# Copy package files
 COPY package*.json ./
-# 2. Force installation of ALL dependencies, including devDependencies (like the Prisma CLI)
-RUN npm install
-COPY . .
-# 3. Generate the client
+
+# Install dependencies
+RUN npm ci
+
+# Copy Prisma schema FIRST
+COPY prisma ./prisma
+
+# Generate Prisma client
 RUN npx prisma generate
 
+# Copy application code
+COPY . .
+
+# =========================
 # Stage 2: Production
+# =========================
 FROM node:20-alpine
+
 WORKDIR /app
-# Copy the node_modules that already contains the generated Prisma client
+
+RUN apk add --no-cache openssl
+
+ENV NODE_ENV=production
+
+# Copy node_modules with generated Prisma client
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/server.js ./server.js
-COPY --from=builder /app/middleware ./middleware
-COPY --from=builder /app/services ./services
-COPY --from=builder /app/utils ./utils
-COPY --from=builder /app/controllers ./controllers
-COPY --from=builder /app/routes ./routes
-COPY --from=builder /app/prisma ./prisma
+
+# Copy app source
+COPY --from=builder /app ./
 
 EXPOSE 5000
 
-# Remove the redundant 'generate' command. 
-# Only run migrations and start the server.
-CMD sh -c "npx prisma migrate deploy && node server.js"
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
