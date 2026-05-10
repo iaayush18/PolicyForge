@@ -68,7 +68,8 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // 1. ADMIN USER
-  const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+  const adminPasswordStr = process.env.ADMIN_PASSWORD || 'admin123';
+  const adminPassword = await bcrypt.hash(adminPasswordStr, 10);
 
   await prisma.user.create({
     data: {
@@ -87,7 +88,8 @@ async function main() {
   const users = [];
 
   for (let i = 1; i <= TOTAL_STUDENTS; i++) {
-    const password = await bcrypt.hash(process.env.USER_PASSWORD, 10);
+    const userPasswordStr = process.env.USER_PASSWORD || 'Welcome123';
+    const password = await bcrypt.hash(userPasswordStr, 10);
 
     users.push({
       email: `student${i}@university.edu`,
