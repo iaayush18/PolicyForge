@@ -35,8 +35,10 @@ async function main() {
   // =========================
   // PASSWORDS (HASH ONCE)
   // =========================
-  const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
-  const userPassword = await bcrypt.hash(process.env.USER_PASSWORD, 10);
+  const adminPasswordStr = process.env.ADMIN_PASSWORD || 'admin123';
+  const userPasswordStr = process.env.USER_PASSWORD || 'Welcome123';
+  const adminPassword = await bcrypt.hash(adminPasswordStr, 10);
+  const userPassword = await bcrypt.hash(userPasswordStr, 10);
 
   // =========================
   // 1. ADMIN (UPSERT)
