@@ -96,22 +96,31 @@ app.use(errorHandler);
 // =========================
 // SERVER START
 // =========================
+// =========================
+// SERVER START
+// =========================
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
   try {
-    // Test DB connection
+
     await prisma.$connect();
     console.log('✅ PostgreSQL connected via Prisma');
-
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
 
   } catch (error) {
+
     console.error('❌ Failed to connect to DB:', error);
     process.exit(1);
   }
+}
+
+// IMPORTANT:
+// Do NOT start server during tests
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
 }
 
 startServer();
@@ -135,4 +144,7 @@ process.on('unhandledRejection', (err) => {
   console.error('Unhandled Promise Rejection:', err);
 });
 
-module.exports = app;
+module.exports = {
+  app,
+  prisma
+};
