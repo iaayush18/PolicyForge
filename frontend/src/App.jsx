@@ -20,7 +20,7 @@ import PHQ9Assessment from './pages/PHQ9Assessment';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename="/v2">
+      <BrowserRouter>
         <div className="App">
           {/* Toast Notifications */}
           <Toaster
