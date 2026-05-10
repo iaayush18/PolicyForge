@@ -1,11 +1,14 @@
 # Stage 1: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
+#Install OpenSSL (Required for Prisma on Alpine)
+RUN apk add --update --no-cache openssl
 COPY package*.json ./
+# 2. Force installation of ALL dependencies, including devDependencies (like the Prisma CLI)
 RUN npm install
 COPY . .
-# Generate the client here, so it gets baked into node_modules
-RUN npx prisma generate 
+# 3. Generate the client
+RUN npx prisma generate
 
 # Stage 2: Production
 FROM node:20-alpine
