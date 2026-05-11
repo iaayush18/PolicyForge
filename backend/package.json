@@ -9,11 +9,11 @@
     "dev": "nodemon server.js",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "seed": "node prisma/seed.js",
-    "test": "NODE_ENV=test jest --coverage",
-    "jest": {
+    "test": "npx cross-env NODE_ENV=test jest --coverage"
+  },
+  "jest": {
     "globalTeardown": "./tests/teardown.js",
-  "   setupFilesAfterEnv": ["./tests/setup.js"]
-      }
+    "setupFilesAfterEnv": ["./tests/setup.js"]
   },
   "keywords": [
     "mental-health",

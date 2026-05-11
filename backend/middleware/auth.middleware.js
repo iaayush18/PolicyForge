@@ -4,14 +4,7 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../utils/prisma');
 
-const crypto = require('crypto');
-
-const getUserSecret = (userId) => {
-  return crypto
-    .createHmac('sha256', process.env.JWT_SECRET)
-    .update(userId.toString())
-    .digest('hex');
-};
+const { getUserSecret } = require('../utils/auth');
 
 const authMiddleware = async (req, res, next) => {
   try {

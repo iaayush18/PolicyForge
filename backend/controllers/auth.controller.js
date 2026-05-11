@@ -4,18 +4,7 @@
 const prisma = require('../utils/prisma');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-
-const getUserSecret = (userId) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET missing");
-  }
-
-  return crypto
-    .createHmac('sha256', process.env.JWT_SECRET)
-    .update(userId.toString())
-    .digest('hex');
-};
+const { getUserSecret } = require('../utils/auth');
 
 const generateToken = (userId) => {
   const secret = getUserSecret(userId);
