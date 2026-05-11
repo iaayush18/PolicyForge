@@ -173,4 +173,3 @@ ALTER TABLE "WellnessAssessment" ADD CONSTRAINT "WellnessAssessment_studentId_fk
 
 -- AddForeignKey
 ALTER TABLE "SupportTicket" ADD CONSTRAINT "SupportTicket_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-

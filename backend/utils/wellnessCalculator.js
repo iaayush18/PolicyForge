@@ -91,7 +91,7 @@ function calculateFinalWellnessScore(sections) {
  */
 function getWellnessStatus(score) {
   if (score <= 20) return { label: 'Excellent', color: '#10B981' };
-  if (score <= 40) return { label: 'Stable', color: '#34D399' };
+  if (score <= 40) return { label: 'Stable', color: '#51b18e' };
   if (score <= 60) return { label: 'Moderate Concern', color: '#FBBF24' };
   if (score <= 80) return { label: 'High Stress', color: '#F97316' };
   return { label: 'Critical', color: '#EF4444' };

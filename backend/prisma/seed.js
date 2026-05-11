@@ -112,6 +112,12 @@ async function main() {
     const final = Math.round((mental*0.35 + academic*0.25 + hostel*0.15 + placement*0.15 + lifestyle*0.10) * 10) / 10;
     const status = final <= 20 ? 'Excellent' : final <= 40 ? 'Stable' : final <= 60 ? 'Moderate Concern' : final <= 80 ? 'High Stress' : 'Critical';
 
+    // Clean up old assessments to prevent duplication on re-runs
+    await prisma.wellnessAssessment.deleteMany({
+      where: { studentId: student.id }
+    });
+
+    // Create new wellness assessment
     await prisma.wellnessAssessment.create({
       data: {
         studentId: student.id,
@@ -135,7 +141,11 @@ async function main() {
     console.log(`✅ ${student.name} (${student.email}) — Wellness: ${final} [${status}]`);
   }
 
-  // Sample support tickets
+  // Sample support tickets - delete old ones first to prevent duplication
+  await prisma.supportTicket.deleteMany({
+    where: { studentId: { in: seededStudents.map(s => s.id) } }
+  });
+
   const ticketData = [
     { type: 'MENTAL_WELLNESS', message: 'Feeling overwhelmed with coursework and exams. Need to talk to someone.', priority: 'HIGH' },
     { type: 'HOSTEL', message: 'Internet connectivity in Block C has been down for 3 days.', priority: 'MEDIUM' },
