@@ -48,7 +48,7 @@ const getAllStudents = async ({ riskScore, course, search }) => {
   return await prisma.student.findMany({
     where: {
       ...(riskScore && riskScore !== 'all' && {
-        currentRiskScore: parseInt(riskScore)
+        currentWellnessScore: parseInt(riskScore)
       }),
       ...(course && { course }),
       ...(search && {
@@ -62,7 +62,7 @@ const getAllStudents = async ({ riskScore, course, search }) => {
       user: { select: { email: true } }
     },
     orderBy: [
-      { currentRiskScore: 'desc' },
+      { currentWellnessScore: 'desc' },
       { name: 'asc' }
     ]
   });

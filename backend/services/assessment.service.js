@@ -33,7 +33,7 @@ const submitAssessment = async (userId, phq9Answers, notes) => {
     await tx.student.update({
       where: { id: student.id },
       data: {
-        currentRiskScore: score.riskScore,
+        currentWellnessScore: score.riskScore,
         lastAssessmentDate: assessment.createdAt,
         totalAssessments: { increment: 1 }
       }
