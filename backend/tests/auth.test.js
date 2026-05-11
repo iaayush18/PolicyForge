@@ -9,7 +9,7 @@ describe('Auth API', () => {
       .post('/api/auth/login')
       .send({
         email: 'student1@university.edu',
-        password: 'Welcome123'
+        password: 'student123'
       });
 
     expect(response.statusCode).toBe(200);
