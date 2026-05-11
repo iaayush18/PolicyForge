@@ -10,15 +10,6 @@ const morgan = require('morgan');
 const prisma = require('./utils/prisma');
 console.log("DB URL:", process.env.DATABASE_URL);
 
-// Ignore migration errors on startup - schema already exists
-process.on('unhandledRejection', (reason) => {
-  if (reason?.message?.includes('P3009') || reason?.message?.includes('migration')) {
-    console.warn('⚠️  Migration error ignored - using existing schema');
-  } else {
-    throw reason;
-  }
-});
-
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const studentRoutes = require('./routes/student.routes');
