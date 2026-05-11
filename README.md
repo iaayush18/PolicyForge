@@ -220,7 +220,7 @@ The application utilizes a split-hosting strategy for maximum free-tier efficien
 
 * Connect your GitHub repo to a Render Web Service.
 * **Environment Variables**: Set `DATABASE_URL`.
-* **Start Command**: `npx prisma migrate deploy && npx prisma db seed && node server.js`
+* **Start Command**: `npx prisma db push --accept-data-loss && npx prisma db seed && node server.js`
 
 ### 3. Frontend UIs (Vercel)
 
