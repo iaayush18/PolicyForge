@@ -7,7 +7,7 @@ describe('Root API Test', () => {
 
     const response = await request(app).get('/');
     expect(response.body).toHaveProperty('message');
-    expect(response.body.message).toContain('Student Mental Health API');
+    expect(response.body.message).toContain('Campus Wellness Intelligence API');
 
   });
 
