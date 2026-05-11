@@ -56,9 +56,10 @@ const getAllTickets = async (req, res, next) => {
 // @access  Private (Admin)
 const updateTicket = async (req, res, next) => {
   try {
-    const { status, adminNotes } = req.body;
+    const { status, priority, adminNotes } = req.body;
     const ticket = await supportService.updateTicket(req.params.id, {
       status,
+      priority,
       adminNotes,
     });
     res.json({ success: true, message: 'Ticket updated', ticket });

@@ -1,7 +1,6 @@
 // services/support.service.js
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 
 /**
  * Create a support ticket (student)
@@ -10,13 +9,17 @@ const createTicket = async (userId, { type, message, priority, isAnonymous }) =>
   const student = await prisma.student.findUnique({ where: { userId } });
   if (!student) throw new Error('Student profile not found');
 
+  const resolvedPriority = priority || 'MEDIUM';
+  const shouldEscalateHostel = type === 'HOSTEL' && ['HIGH', 'CRITICAL'].includes(resolvedPriority);
+
   return await prisma.supportTicket.create({
     data: {
       studentId: student.id,
       type,
       message,
-      priority: priority || 'MEDIUM',
+      priority: resolvedPriority,
       isAnonymous: isAnonymous || false,
+      ...(shouldEscalateHostel && { status: 'ESCALATED' }),
     },
   });
 };
@@ -43,7 +46,7 @@ const getAllTickets = async (filters = {}) => {
   if (filters.type) where.type = filters.type;
   if (filters.priority) where.priority = filters.priority;
 
-  return await prisma.supportTicket.findMany({
+  const tickets = await prisma.supportTicket.findMany({
     where,
     orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
     include: {
@@ -52,22 +55,28 @@ const getAllTickets = async (filters = {}) => {
       },
     },
   });
+
+  // Enforce anonymity at API-level for admin/support views.
+  return tickets.map((t) => (t.isAnonymous ? { ...t, student: null } : t));
 };
 
 /**
  * Update ticket status + optional admin notes (admin)
  */
-const updateTicket = async (ticketId, { status, adminNotes }) => {
-  return await prisma.supportTicket.update({
+const updateTicket = async (ticketId, { status, priority, adminNotes }) => {
+  const ticket = await prisma.supportTicket.update({
     where: { id: ticketId },
     data: {
       ...(status && { status }),
+      ...(priority && { priority }),
       ...(adminNotes !== undefined && { adminNotes }),
     },
     include: {
       student: { select: { name: true, studentId: true } },
     },
   });
+
+  return ticket.isAnonymous ? { ...ticket, student: null } : ticket;
 };
 
 /**

@@ -4,8 +4,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { assessmentAPI, studentAPI } from '../services/api';
-import { LogOut, RefreshCw, TrendingDown, TrendingUp, Calendar, BookOpen, Activity, Heart } from 'lucide-react';
+import { assessmentAPI, studentAPI, supportAPI } from '../services/api';
+import { LogOut, RefreshCw, TrendingDown, TrendingUp, Calendar, BookOpen, Activity, Heart, MessageSquare, Send } from 'lucide-react';
 import { format } from 'date-fns';
 
 const RiskRing = ({ score, color }) => {
@@ -71,19 +71,23 @@ const StudentDashboard = () => {
   const { student, logout, updateStudentProfile } = useAuth();
   const navigate = useNavigate();
   const [assessmentHistory, setAssessmentHistory] = useState([]);
+  const [myTickets, setMyTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadAssessmentHistory(); }, []);
 
   const loadAssessmentHistory = async () => {
     try {
-      const [historyRes, profileRes] = await Promise.all([
+      const [historyRes, profileRes, ticketsRes] = await Promise.all([
         assessmentAPI.getMyHistory(),
         studentAPI.getMyProfile(),
+        supportAPI.getMyTickets(),
       ]);
       
       // FIX: Robust API property checks based on Express backend patterns
       setAssessmentHistory(historyRes.assessments || historyRes.data || []);
+
+      setMyTickets(ticketsRes.tickets || ticketsRes.data || []);
       
       if (updateStudentProfile && profileRes) {
         updateStudentProfile(profileRes.student || profileRes.data || profileRes);
@@ -121,6 +125,13 @@ const StudentDashboard = () => {
 
   const riskScore = student.currentWellnessScore ?? student.currentRiskScore ?? 0;
   const riskColor = getRiskColor(riskScore);
+  const recentTickets = (myTickets || []).slice(0, 3);
+  const ticketStatusColor = (status) => ({
+    OPEN: '#8b78ff',
+    IN_PROGRESS: '#22d3ee',
+    RESOLVED: '#10B981',
+    ESCALATED: '#EF4444',
+  }[status] || 'rgba(255,255,255,0.35)');
 
   return (
     <div className="min-h-screen app-bg text-white pb-16">
@@ -208,9 +219,43 @@ const StudentDashboard = () => {
               </div>
             </div>
             <div className="glass p-5" style={{ border: '1px solid rgba(139,120,255,0.2)', background: 'rgba(139,120,255,0.06)' }}>
-              <p className="text-xs font-black uppercase tracking-widest text-violet-300/70 mb-2">Need Support?</p>
-              <p className="text-xs text-white/50 mb-4 leading-relaxed">Confidential help is always available. You are not alone.</p>
-              <a href="mailto:counseling@university.edu" className="block text-center text-xs font-bold py-2.5 px-4 rounded-xl transition-all" style={{ background: 'rgba(139,120,255,0.15)', border: '1px solid rgba(139,120,255,0.3)', color: '#a78bfa' }}>counseling@university.edu</a>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-violet-300/70">Support Tickets</p>
+                  <p className="text-[11px] text-white/45 mt-1">Submit counseling, placement mentoring, hostel, academic/faculty, or other requests.</p>
+                </div>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(139,120,255,0.12)', border: '1px solid rgba(139,120,255,0.25)' }}>
+                  <MessageSquare size={16} className="text-violet-300/80" />
+                </div>
+              </div>
+
+              {recentTickets.length > 0 ? (
+                <div className="space-y-2 mb-4">
+                  {recentTickets.map((t) => (
+                    <div key={t.id} className="flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div className="w-2 h-2 rounded-full" style={{ background: ticketStatusColor(t.status) }} />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-white/80 truncate">{t.type?.replace('_', ' ') || 'Support'}</p>
+                        <p className="text-[10px] text-white/35 font-mono mt-0.5">{t.status?.replace('_', ' ') || '—'} · {t.priority || '—'}</p>
+                      </div>
+                      <span className="ml-auto text-[9px] font-mono text-white/25">{t.createdAt ? new Date(t.createdAt).toLocaleDateString() : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-white/40 mb-4">No requests yet.</p>
+              )}
+
+              <button
+                onClick={() => navigate('/student/support')}
+                className="w-full text-center text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                style={{ background: 'rgba(139,120,255,0.15)', border: '1px solid rgba(139,120,255,0.3)', color: '#a78bfa' }}
+              >
+                <Send size={14} /> Request Support
+              </button>
+              <a href="mailto:counseling@university.edu" className="block text-center text-[11px] font-semibold mt-3 text-white/40 hover:text-white/60 transition">
+                Or email counseling@university.edu
+              </a>
             </div>
           </div>
         </div>
