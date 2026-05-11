@@ -15,7 +15,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import AddStudent from './pages/AddStudent';
 import EditStudent from './pages/EditStudent';
 import StudentDashboard from './pages/StudentDashboard';
-import PHQ9Assessment from './pages/PHQ9Assessment';
+import WellnessAssessment from './pages/WellnessAssessment';
+import SupportTicketForm from './pages/SupportTicketForm';
 
 function App() {
   return (
@@ -98,7 +99,15 @@ function App() {
               path="/student/assessment"
               element={
                 <ProtectedRoute>
-                  <PHQ9Assessment />
+                  <WellnessAssessment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/support"
+              element={
+                <ProtectedRoute>
+                  <SupportTicketForm />
                 </ProtectedRoute>
               }
             />

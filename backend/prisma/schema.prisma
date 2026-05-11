@@ -1,39 +1,50 @@
+// schema.prisma
+// Campus Wellness Platform Prisma Schema
+
 datasource db {
-  provider = "postgresql" 
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
+
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   password  String
-  role      String    @default("STUDENT")
-  isActive  Boolean   @default(true)
+  role      Role     @default(STUDENT)
+  isActive  Boolean  @default(true)
   lastLogin DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   student   Student?
 }
 
+enum Role {
+  ADMIN
+  STUDENT
+}
+
 model Student {
-  id                 String       @id @default(uuid())
-  userId             String       @unique
-  studentId          String       @unique
-  name               String
-  age                Int
-  gender             String
-  course             String
-  cgpa               Float
-  currentRiskScore   Int          @default(0)
-  lastAssessmentDate DateTime?
-  totalAssessments   Int          @default(0)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-  assessments        Assessment[]
-  user               User         @relation(fields: [userId], references: [id])
+  id                   String               @id @default(uuid())
+  userId               String               @unique
+  studentId            String               @unique
+  name                 String
+  age                  Int
+  gender               String
+  course               String
+  cgpa                 Float
+  currentWellnessScore Float                @default(0)
+  lastAssessmentDate   DateTime?
+  totalAssessments     Int                  @default(0)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  user                 User                 @relation(fields: [userId], references: [id])
+  assessments          Assessment[]
+  wellnessAssessments  WellnessAssessment[]
+  supportTickets       SupportTicket[]
 }
 
 model Assessment {
@@ -62,13 +73,91 @@ model Assessment {
   @@index([isCritical])
 }
 
-enum Role {
-  ADMIN
-  STUDENT
+model WellnessAssessment {
+  id                 String   @id @default(uuid())
+  studentId          String
+  mentalScore        Float    @default(0)
+  academicScore      Float    @default(0)
+  hostelScore        Float    @default(0)
+  placementScore     Float    @default(0)
+  lifestyleScore     Float    @default(0)
+  finalWellnessScore Float    @default(0)
+  wellnessStatus     String   @default("Unknown")
+  // Mental (0-3)
+  m1_exhaustion      Int
+  m2_sleep           Int
+  m3_motivation      Int
+  m4_concentration   Int
+  m5_isolation       Int
+  // Academic (0-3)
+  a1_assignment      Int
+  a2_exam            Int
+  a3_backlog         Int
+  a4_time_mgmt       Int
+  a5_attendance      Int
+  // Hostel (1-5 Likert)
+  h1_food            Int
+  h2_cleanliness     Int
+  h3_internet        Int
+  h4_noise           Int
+  h5_safety          Int
+  // Placement (0-3)
+  p1_anxiety         Int
+  p2_technical       Int
+  p3_resume          Int
+  p4_interview       Int
+  p5_unemployment    Int
+  // Lifestyle (0-3)
+  l1_physical        Int
+  l2_social          Int
+  l3_screen_time     Int
+  l4_sleep_routine   Int
+  l5_campus_activity Int
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  student            Student  @relation(fields: [studentId], references: [id])
+
+  @@index([studentId, createdAt])
+  @@index([finalWellnessScore])
 }
 
-enum Gender {
-  Male
-  Female
-  Other
+enum TicketType {
+  MENTAL_WELLNESS
+  ACADEMIC
+  HOSTEL
+  PLACEMENT
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  ESCALATED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model SupportTicket {
+  id          String         @id @default(uuid())
+  studentId   String
+  type        TicketType
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  message     String
+  isAnonymous Boolean        @default(false)
+  adminNotes  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  student     Student        @relation(fields: [studentId], references: [id])
+
+  @@index([studentId])
+  @@index([status])
+  @@index([priority])
 }
