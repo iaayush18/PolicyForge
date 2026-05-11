@@ -7,8 +7,20 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const { execSync } = require('child_process');
 const prisma = require('./utils/prisma');
 console.log("DB URL:", process.env.DATABASE_URL);
+
+// Auto-resolve stuck migrations on startup
+try {
+  console.log('Resolving any stuck migrations...');
+  execSync('npx prisma migrate resolve --rolled-back 0_init 2>/dev/null || true', { stdio: 'inherit' });
+  console.log('Deploying migrations...');
+  execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+  console.log('✓ Migrations resolved and deployed');
+} catch (err) {
+  console.warn('Migration resolution skipped or already resolved');
+}
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
