@@ -120,7 +120,7 @@ const EditStudent = () => {
                 </div>
                 <div>
                   <span className="block opacity-50 text-[10px] uppercase font-bold">Current Risk</span>
-                  <span className="font-bold text-red-400">{student?.currentRiskScore} / 3</span>
+                  <span className="font-bold text-red-400">{student?.currentWellnessScore ?? student?.currentRiskScore ?? 0}</span>
                 </div>
                 <div>
                   <span className="block opacity-50 text-[10px] uppercase font-bold">Total History</span>

@@ -119,7 +119,7 @@ const StudentDashboard = () => {
     );
   }
 
-  const riskScore = student.currentRiskScore || 0;
+  const riskScore = student.currentWellnessScore ?? student.currentRiskScore ?? 0;
   const riskColor = getRiskColor(riskScore);
 
   return (
