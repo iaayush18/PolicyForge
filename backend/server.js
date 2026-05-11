@@ -17,6 +17,8 @@ const authRoutes = require('./routes/auth.routes');
 const studentRoutes = require('./routes/student.routes');
 const assessmentRoutes = require('./routes/assessment.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const wellnessRoutes = require('./routes/wellness.routes');
+const supportRoutes = require('./routes/support.routes');
 
 // Middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -48,6 +50,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/wellness', wellnessRoutes);
+app.use('/api/support', supportRoutes);
 
 // =========================
 // HEALTH CHECK
@@ -76,8 +80,8 @@ app.get('/health', async (req, res) => {
 // =========================
 app.get('/', (req, res) => {
   res.json({
-    message: 'Student Mental Health API (PostgreSQL + Prisma)',
-    version: '2.0'
+    message: 'Campus Wellness Intelligence API (PostgreSQL + Prisma)',
+    version: '3.0'
   });
 });
 

@@ -1,126 +1,162 @@
 /**
  * controllers/dashboard.controller.js
- * Logic for Dashboard Analytics - Migrated to Prisma
+ * Campus Wellness Platform — Analytics
  */
 
 const { PrismaClient } = require('@prisma/client');
+const { getWellnessStatus } = require('../utils/wellnessCalculator');
+const { getPendingCount } = require('../services/support.service');
 const prisma = new PrismaClient();
 
-// @desc    Get top-level statistics
+// @desc    Get top-level wellness statistics
 // @route   GET /api/dashboard/stats
 const getStats = async (req, res, next) => {
   try {
-    // Optimization: Run all counts in parallel to reduce response time
-    const [totalStudents, criticalCount, moderateCount, healthyCount] = await Promise.all([
-      prisma.student.count(),
-      prisma.student.count({ where: { currentRiskScore: 3 } }),
-      prisma.student.count({ where: { currentRiskScore: 2 } }),
-      prisma.student.count({ 
-        where: { 
-          OR: [
-            { currentRiskScore: { lte: 1 } }
-          ] 
-        } 
-      })
-    ]);
+    const students = await prisma.student.findMany({
+      select: { currentWellnessScore: true },
+    });
+
+    const totalStudents = students.length;
+    let excellentCount = 0, stableCount = 0, concernCount = 0,
+        highStressCount = 0, criticalCount = 0;
+
+    students.forEach(({ currentWellnessScore: s }) => {
+      if (s <= 20) excellentCount++;
+      else if (s <= 40) stableCount++;
+      else if (s <= 60) concernCount++;
+      else if (s <= 80) highStressCount++;
+      else criticalCount++;
+    });
+
+    const pendingSupport = await getPendingCount();
 
     res.json({
       success: true,
       stats: {
         totalStudents,
+        excellentCount,
+        stableCount,
+        concernCount,
+        highStressCount,
         criticalCount,
-        moderateCount,
-        healthyCount,
-        criticalPercentage: totalStudents ? ((criticalCount / totalStudents) * 100).toFixed(1) : 0
-      }
+        pendingSupport,
+        criticalPercentage: totalStudents
+          ? ((criticalCount / totalStudents) * 100).toFixed(1)
+          : 0,
+      },
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get High Risk Students List
+// @desc    Get High Priority Students (wellness score > 60)
 // @route   GET /api/dashboard/high-risk
 const getHighRiskStudents = async (req, res, next) => {
   try {
     const students = await prisma.student.findMany({
-      where: { currentRiskScore: 3 },
-      include: {
-        user: { select: { email: true } }
-      },
-      orderBy: { lastAssessmentDate: 'desc' },
-      take: 10
+      where: { currentWellnessScore: { gt: 60 } },
+      include: { user: { select: { email: true } } },
+      orderBy: { currentWellnessScore: 'desc' },
+      take: 10,
     });
-
-    res.json({
-      success: true,
-      data: students
-    });
+    res.json({ success: true, data: students });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get Risk Distribution and Stats by Course
+// @desc    Get wellness stats by course
 // @route   GET /api/dashboard/by-course
 const getStatsByCourse = async (req, res, next) => {
   try {
     const data = await prisma.student.findMany({
-      select: { course: true, currentRiskScore: true }
+      select: { course: true, currentWellnessScore: true },
     });
 
-    // Process the data to get custom aggregations that Prisma's groupBy doesn't easily support
-    const courseStatsMap = data.reduce((acc, s) => {
+    const courseMap = data.reduce((acc, s) => {
       if (!acc[s.course]) {
-        acc[s.course] = {
-          course: s.course,
-          count: 0,
-          totalRisk: 0,
-          criticalCount: 0
-        };
+        acc[s.course] = { course: s.course, count: 0, totalScore: 0, criticalCount: 0 };
       }
-      const score = s.currentRiskScore || 0;
       acc[s.course].count++;
-      acc[s.course].totalRisk += score;
-      if (score === 3) acc[s.course].criticalCount++;
-
+      acc[s.course].totalScore += s.currentWellnessScore || 0;
+      if ((s.currentWellnessScore || 0) > 80) acc[s.course].criticalCount++;
       return acc;
     }, {});
 
-    const stats = Object.values(courseStatsMap).map(c => ({
+    const stats = Object.values(courseMap).map((c) => ({
       course: c.course,
       count: c.count,
-      avgRisk: (c.totalRisk / c.count).toFixed(2),
-      criticalCount: c.criticalCount
+      avgWellnessScore: parseFloat((c.totalScore / c.count).toFixed(1)),
+      criticalCount: c.criticalCount,
     }));
 
-    res.json({
-      success: true,
-      data: stats
-    });
+    res.json({ success: true, data: stats });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get Recent Activity (Latest Assessments)
+// @desc    Get average score per wellness domain (for analytics charts)
+// @route   GET /api/dashboard/domain-averages
+const getDomainAverages = async (req, res, next) => {
+  try {
+    const assessments = await prisma.wellnessAssessment.findMany({
+      select: {
+        mentalScore: true,
+        academicScore: true,
+        hostelScore: true,
+        placementScore: true,
+        lifestyleScore: true,
+      },
+    });
+
+    if (!assessments.length) {
+      return res.json({
+        success: true,
+        data: { mental: 0, academic: 0, hostel: 0, placement: 0, lifestyle: 0 },
+      });
+    }
+
+    const totals = assessments.reduce(
+      (acc, a) => {
+        acc.mental += a.mentalScore;
+        acc.academic += a.academicScore;
+        acc.hostel += a.hostelScore;
+        acc.placement += a.placementScore;
+        acc.lifestyle += a.lifestyleScore;
+        return acc;
+      },
+      { mental: 0, academic: 0, hostel: 0, placement: 0, lifestyle: 0 }
+    );
+
+    const n = assessments.length;
+    const data = {
+      mental: parseFloat((totals.mental / n).toFixed(1)),
+      academic: parseFloat((totals.academic / n).toFixed(1)),
+      hostel: parseFloat((totals.hostel / n).toFixed(1)),
+      placement: parseFloat((totals.placement / n).toFixed(1)),
+      lifestyle: parseFloat((totals.lifestyle / n).toFixed(1)),
+    };
+
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get Recent Wellness Activity
 // @route   GET /api/dashboard/recent-activity
 const getRecentActivity = async (req, res, next) => {
   try {
-    const recentAssessments = await prisma.assessment.findMany({
+    const recent = await prisma.wellnessAssessment.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: {
-        student: {
-          select: { name: true, studentId: true }
-        }
-      }
+        student: { select: { name: true, studentId: true } },
+      },
     });
-
-    res.json({
-      success: true,
-      data: recentAssessments
-    });
+    res.json({ success: true, data: recent });
   } catch (error) {
     next(error);
   }
@@ -130,5 +166,6 @@ module.exports = {
   getStats,
   getHighRiskStudents,
   getStatsByCourse,
-  getRecentActivity
+  getDomainAverages,
+  getRecentActivity,
 };
