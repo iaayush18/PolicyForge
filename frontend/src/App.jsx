@@ -3,20 +3,22 @@
  * Main Application Component with Routing
  */
 
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './context/ProtectedRoute';
 
 // Pages
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import AddStudent from './pages/AddStudent';
-import EditStudent from './pages/EditStudent';
-import StudentDashboard from './pages/StudentDashboard';
-import WellnessAssessment from './pages/WellnessAssessment';
-import SupportTicketForm from './pages/SupportTicketForm';
+
+const Login = lazy(() => import('./pages/Login'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AddStudent = lazy(() => import('./pages/AddStudent'));
+const EditStudent = lazy(() => import('./pages/EditStudent'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const WellnessAssessment = lazy(() => import('./pages/WellnessAssessment'));
+const SupportTicketForm = lazy(() => import('./pages/SupportTicketForm'));
+
 
 function App() {
   return (
@@ -56,6 +58,7 @@ function App() {
           />
 
           {/* Routes */}
+          <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-white">Loading…</div>}>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
@@ -115,7 +118,7 @@ function App() {
             {/* Default Route */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
+          </Routes></Suspense>
         </div>
       </BrowserRouter>
     </AuthProvider>

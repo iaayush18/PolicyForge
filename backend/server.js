@@ -3,6 +3,10 @@
  * Express Server (PostgreSQL + Prisma)
  */
 require('dotenv').config();
+const compression = require('compression');
+const apicache = require('apicache');
+const cluster = require('cluster');
+const os = require('os');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -23,6 +27,10 @@ const errorHandler = require('./middleware/errorHandler');
 
 // Init app
 const app = express();
+// Enable gzip/brotli compression
+app.use(compression());
+// Enable HTTP keep-alive
+app.use((req, res, next) => { res.setHeader('Connection', 'keep-alive'); next(); });
 
 // =========================
 // MIDDLEWARE
@@ -44,9 +52,13 @@ if (process.env.NODE_ENV !== 'production') {
 // =========================
 // ROUTES
 // =========================
+const cacheMiddleware = process.env.NODE_ENV === 'test' 
+  ? (req, res, next) => next() 
+  : apicache.middleware('30 seconds');
+
 app.use('/api/auth', authRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/assessments', assessmentRoutes);
+app.use('/api/students', cacheMiddleware, studentRoutes);
+app.use('/api/assessments', cacheMiddleware, assessmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/wellness', wellnessRoutes);
 app.use('/api/support', supportRoutes);
@@ -105,26 +117,34 @@ app.use(errorHandler);
 // =========================
 const PORT = process.env.PORT || 5000;
 
+const WORKER_COUNT = Math.max(1, Math.floor(os.cpus().length * 0.8)); // 80% of cores, minimum 1
+
 async function startServer() {
   try {
-
     await prisma.$connect();
     console.log('✅ PostgreSQL connected via Prisma');
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
-
   } catch (error) {
-
     console.error('❌ Failed to connect to DB:', error);
     process.exit(1);
   }
 }
 
-// IMPORTANT:
-// Do NOT start server during tests
 if (process.env.NODE_ENV !== 'test') {
-  startServer();
+  if (cluster.isMaster) {
+    console.log(`🧩 Master process ${process.pid} is forking ${WORKER_COUNT} worker(s)`);
+    for (let i = 0; i < WORKER_COUNT; i++) {
+      cluster.fork();
+    }
+    cluster.on('exit', (worker, code, signal) => {
+      console.log(`⚠️ Worker ${worker.process.pid} died. Restarting...`);
+      cluster.fork();
+    });
+  } else {
+    startServer();
+  }
 }
 
 // =========================

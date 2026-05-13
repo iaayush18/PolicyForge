@@ -2,11 +2,31 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://backend-stable-uxqv.onrender.com/api/$1"
+      "destination": "https://backend-stable-mabn.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).(js|css|woff2|png|svg|jpg)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }

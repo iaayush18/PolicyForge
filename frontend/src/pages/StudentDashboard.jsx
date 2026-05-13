@@ -1,10 +1,10 @@
 /**
  * src/pages/StudentDashboard.jsx
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { assessmentAPI, studentAPI, supportAPI } from '../services/api';
+import { cachedFetch } from '../hooks/useApi';
 import { LogOut, RefreshCw, TrendingDown, TrendingUp, Calendar, BookOpen, Activity, Heart, MessageSquare, Send } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -79,15 +79,13 @@ const StudentDashboard = () => {
   const loadAssessmentHistory = async () => {
     try {
       const [historyRes, profileRes, ticketsRes] = await Promise.all([
-        assessmentAPI.getMyHistory(),
-        studentAPI.getMyProfile(),
-        supportAPI.getMyTickets(),
+        cachedFetch('/api/assessments/my-history'),
+        cachedFetch('/api/students/me'),
+        cachedFetch('/api/support/my-tickets'),
       ]);
       
-      // FIX: Robust API property checks based on Express backend patterns
-      setAssessmentHistory(historyRes.assessments || historyRes.data || []);
-
-      setMyTickets(ticketsRes.tickets || ticketsRes.data || []);
+      setAssessmentHistory(historyRes.assessments || historyRes.data || historyRes || []);
+      setMyTickets(ticketsRes.tickets || ticketsRes.data || ticketsRes || []);
       
       if (updateStudentProfile && profileRes) {
         updateStudentProfile(profileRes.student || profileRes.data || profileRes);
@@ -123,15 +121,15 @@ const StudentDashboard = () => {
     );
   }
 
-  const riskScore = student.currentWellnessScore ?? student.currentRiskScore ?? 0;
-  const riskColor = getRiskColor(riskScore);
-  const recentTickets = (myTickets || []).slice(0, 3);
-  const ticketStatusColor = (status) => ({
+  const riskScore = useMemo(() => student.currentWellnessScore ?? student.currentRiskScore ?? 0, [student]);
+  const riskColor = useMemo(() => getRiskColor(riskScore), [riskScore]);
+  const recentTickets = useMemo(() => (myTickets || []).slice(0, 3), [myTickets]);
+  const ticketStatusColor = useMemo(() => (status) => ({
     OPEN: '#8b78ff',
     IN_PROGRESS: '#22d3ee',
     RESOLVED: '#10B981',
     ESCALATED: '#EF4444',
-  }[status] || 'rgba(255,255,255,0.35)');
+  }[status] || 'rgba(255,255,255,0.35)'), []);
 
   return (
     <div className="min-h-screen app-bg text-white pb-16">

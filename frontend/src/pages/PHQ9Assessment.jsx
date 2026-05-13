@@ -1,10 +1,11 @@
 /**
  * src/pages/PHQ9Assessment.jsx
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { assessmentAPI, studentAPI } from '../services/api';
+import { assessmentAPI } from '../services/api';
+import { cachedFetch } from '../hooks/useApi';
 import { ArrowLeft, ArrowRight, CheckCircle, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -83,11 +84,11 @@ const PHQ9Assessment = () => {
   const [notes, setNotes] = useState('');
 
   const totalQuestions = PHQ9_QUESTIONS.length;
-  const answeredCount = Object.values(answers).filter(v => v !== null).length;
-  const progress = (answeredCount / totalQuestions) * 100;
-  const rawScore = Object.values(answers).reduce((s, v) => s + (v || 0), 0);
-  const liveRisk = scoreToRisk(rawScore);
-  const isFormComplete = () => Object.values(answers).every(v => v !== null);
+  const answeredCount = useMemo(() => Object.values(answers).filter(v => v !== null).length, [answers]);
+  const progress = useMemo(() => (answeredCount / totalQuestions) * 100, [answeredCount, totalQuestions]);
+  const rawScore = useMemo(() => Object.values(answers).reduce((s, v) => s + (v || 0), 0), [answers]);
+  const liveRisk = useMemo(() => scoreToRisk(rawScore), [rawScore]);
+  const isFormComplete = useMemo(() => Object.values(answers).every(v => v !== null), [answers]);
   const currentQ = PHQ9_QUESTIONS[currentStep];
   const currentAnswer = currentQ ? answers[currentQ.key] : null;
 
@@ -151,10 +152,9 @@ const PHQ9Assessment = () => {
         phq9Answers: answers,
         notes: notes.trim() || undefined,
       });
-      const studentResponse = await studentAPI.getMyProfile();
-
-      // FIX: Safely extract profile data based on standard axios responses
-      const freshProfile = studentResponse.student || studentResponse.data || studentResponse;
+      // Use cachedFetch for student profile to leverage browser caching
+      const studentResponse = await cachedFetch('/api/students/me');
+      const freshProfile = studentResponse;
       if (updateStudentProfile) updateStudentProfile(freshProfile);
 
       toast.success('Assessment complete!');

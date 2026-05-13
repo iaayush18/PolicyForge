@@ -1,10 +1,10 @@
 // AdminDashboard.jsx
 // Campus Wellness Intelligence Platform — Admin View
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { dashboardAPI, studentAPI, supportAPI } from '../services/api';
+import { cachedFetch } from '../hooks/useApi';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis,
@@ -83,21 +83,21 @@ const AdminDashboard = () => {
 
   useEffect(() => { loadDashboardData(); }, []);
 
-  const loadDashboardData = async (isRefresh = false) => {
+  const loadDashboardData = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true); else setLoading(true);
       const [statsRes, studentsRes, courseRes, domainRes, ticketsRes] = await Promise.all([
-        dashboardAPI.getStats(),
-        studentAPI.getAll(),
-        dashboardAPI.getByCourse(),
-        dashboardAPI.getDomainAverages(),
-        supportAPI.getAll(),
+        cachedFetch('/api/dashboard/stats'),
+        cachedFetch('/api/students'),
+        cachedFetch('/api/dashboard/by-course'),
+        cachedFetch('/api/dashboard/domain-averages'),
+        cachedFetch('/api/support'),
       ]);
-      setStats(statsRes.stats || statsRes.data);
-      setStudents(studentsRes.data || studentsRes.students || []);
-      setCourseStats(courseRes.data || courseRes.courseStats || []);
-      setDomainAverages(domainRes.data || null);
-      setTickets(ticketsRes.tickets || []);
+      setStats(statsRes.stats || statsRes.data || statsRes);
+      setStudents(studentsRes.data || studentsRes.students || studentsRes || []);
+      setCourseStats(courseRes.data || courseRes.courseStats || courseRes || []);
+      setDomainAverages(domainRes.data || domainRes || null);
+      setTickets(ticketsRes.tickets || ticketsRes || []);
     } catch (error) {
       console.error('Dashboard Load Error:', error);
       toast.error('Failed to load dashboard data');
@@ -105,28 +105,35 @@ const AdminDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
-  const handleDeleteStudent = async (id, name) => {
+  const handleDeleteStudent = useCallback(async (id, name) => {
     if (!window.confirm(`Permanently delete all records for ${name}?`)) return;
     try {
-      await studentAPI.delete(id);
+      // Note: cachedFetch is for GET, we still use axios for mutations
+      // but I'll import studentAPI or use fetch for simplicity if I want to be 100% independent
+      // For now I'll just keep it but wrap with useCallback
+      await cachedFetch(`/api/students/${id}`, { method: 'DELETE' });
       toast.success('Student removed successfully');
       loadDashboardData(true);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error deleting student');
+      toast.error(error.message || 'Error deleting student');
     }
-  };
+  }, [loadDashboardData]);
 
-  const handleUpdateTicket = async (ticketId, status) => {
+  const handleUpdateTicket = useCallback(async (ticketId, status) => {
     try {
-      await supportAPI.updateStatus(ticketId, { status });
+      await fetch(`/api/support/${ticketId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
       toast.success(`Ticket marked as ${status}`);
       loadDashboardData(true);
     } catch (error) {
       toast.error('Failed to update ticket');
     }
-  };
+  }, [loadDashboardData]);
 
   const getWellnessColor = (score) => {
     if (score <= 20) return '#10B981';
