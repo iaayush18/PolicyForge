@@ -1,8 +1,8 @@
-# 🛡️ PolicyForge: AI-Powered Student Mental Health Monitoring
+# 🛡️ PolicyForge: High-Performance Student Wellness Intelligence
 
-A complete **MERN-to-PERN stack** web application for assessing and monitoring student mental well-being using the **PHQ-9 (Patient Health Questionnaire-9)** clinical standard. 
+**PolicyForge** is a clinical-grade student mental health monitoring platform built on the **PERN stack** (PostgreSQL, Express, React, Node.js). It leverages the **PHQ-9 (Patient Health Questionnaire-9)** standard to provide real-time wellness insights.
 
-Originally built as a standard application, **PolicyForge** has been completely overhauled to feature robust DevOps practices. It now utilizes a highly scalable, containerized architecture with multi-environment CI/CD pipelines, PostgreSQL database migrations, and Stable/Canary deployment strategies.
+The platform is engineered for maximum efficiency on free-tier infrastructure, featuring hardware-aware clustering, multi-layer caching (Browser & Server), and aggressive response compression. It follows modern DevOps practices with containerized workflows, automated CI/CD, and a dual-frontend (Stable/Canary) deployment strategy.
 
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)
@@ -27,14 +27,58 @@ Originally built as a standard application, **PolicyForge** has been completely 
 
 ## 🏗️ System Architecture & DevOps
 
-The PolicyForge update transitioned the application into a robust, cloud-native microservices architecture:
+The PolicyForge architecture is designed for high availability and low latency, utilizing a distributed setup across Vercel and Render.
 
+### System Architecture Diagram (Report Friendly)
+
+```plantuml
+@startuml
+!theme plain
+skinparam monochrome true
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title PolicyForge System Architecture
+
+package "Frontend Layer (Vercel)" {
+    [Stable UI (Main)] as MainUI
+    [Canary UI (v2)] as CanaryUI
+    [Browser Cache API] as CacheAPI
+}
+
+package "API Layer (Render)" {
+    [Clustered Express Server] as Express
+    [Response Compression (Brotli)] as Compression
+    [Server-Side Cache (apicache)] as ServerCache
+}
+
+database "Data Layer (PostgreSQL)" {
+    [Neon Database] as DB
+}
+
+MainUI --> Express : API Calls
+CanaryUI --> Express : API Calls
+Express --> ServerCache : Cache Check
+ServerCache --> DB : Prisma ORM
+Express --> Compression : Gzip/Brotli
+MainUI <--> CacheAPI : Stale-While-Revalidate
+@enduml
+```
+
+### Infrastructure Key Features:
+
+* **Performance Optimization**: 
+    * **Clustering**: Hardware-aware Node.js clustering to maximize CPU utilization.
+    * **Compression**: Gzip and Brotli middleware for reduced network payloads.
+    * **Caching**: Dual-layer caching strategy:
+        * *Server-side*: 30s TTL on hot API routes using `apicache`.
+        * *Client-side*: Stale-While-Revalidate pattern using Browser Cache API.
 * **Database Migration**: Transitioned from MongoDB to **PostgreSQL** using **Prisma ORM** for type-safe database queries and automated schema migrations.
-* **Containerization**: Both the backend API and frontend UIs are fully Dockerized and automatically published to the **GitHub Container Registry (GHCR)**.
-* **Canary Deployments (A/B Testing)**: Implemented a dual-frontend architecture:
-    * **Stable Version**: Tracks the `main` branch, served at the root domain.
-    * **Canary Version**: Tracks the `v2` branch, served under the `/v2/` path for safe feature rollouts.
-* **Reverse Proxying**: Uses **Nginx** locally to seamlessly route traffic between the Stable UI, Canary UI, and the Backend API.
+* **Containerization**: Both the backend API and frontend UIs are fully Dockerized and published to **GHCR**.
+* **Deployment Strategy**: 
+    * **Stable**: Tracks `main`, production-ready.
+    * **Canary**: Tracks `v2`, for testing new features (e.g., modern glassmorphism UI).
+* **Reverse Proxying**: Nginx routes traffic locally between Stable, Canary, and Backend services.
 
 ---
 
