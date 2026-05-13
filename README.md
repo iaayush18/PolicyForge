@@ -113,10 +113,16 @@ The frontend is built with React 18 and Tailwind CSS, focusing on a clean, profe
 
 ## ✨ Core Application Features
 
-* **Standardized Assessment**: Utilizes the clinically validated PHQ-9 questionnaire.
-* **Automatic Risk Scoring**: Maps raw scores (0-27) to clinical risk tiers (0-3).
-* **Real-Time Alerts**: Flags critical cases instantly for administrator review.
-* **Historical Tracking**: Maintains longitudinal data for identifying trends in student mental health over semesters.
+* **Multi-Domain Wellness Intelligence**: Monitors five critical pillars of campus life:
+    * 🧠 **Mental Wellness**: Emotional health and clinical stress monitoring (PHQ-9).
+    * 📚 **Academic Pulse**: Tracking workload pressure, exam anxiety, and attendance stress.
+    * 🏠 **Campus Living**: Real-time satisfaction tracking for hostel and mess facilities.
+    * 💼 **Career Readiness**: Monitoring placement anxiety and technical preparedness.
+    * ⚡ **Lifestyle Balance**: Tracking physical activity and social connectivity.
+* **Automatic Risk Engine**: Intelligent mapping of multi-domain responses to unified wellness tiers (Excellent to Critical).
+* **Real-Time Intervention Alerts**: Instant flagging of high-priority cases across any domain for counselor review.
+* **Support Lifecycle Management**: Integrated ticketing system for students to request help anonymously or via their profile.
+* **Historical Wellness Insights**: Longitudinal data tracking to identify student well-being trends over semesters.
 
 ---
 
